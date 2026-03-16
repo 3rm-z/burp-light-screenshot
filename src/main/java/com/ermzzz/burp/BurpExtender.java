@@ -4,6 +4,7 @@ import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.ui.menu.Menu;
 import burp.api.montoya.ui.menu.MenuItem;
+import burp.api.montoya.ui.menu.BasicMenuItem;
 
 import com.ermzzz.burp.ui.RegionSelectorOverlay;
 import com.ermzzz.burp.capture.LightThemeCapture;
@@ -25,8 +26,12 @@ public class BurpExtender implements BurpExtension {
 
         api.logging().logToOutput("Light Screenshot Helper loaded");
 
+        BasicMenuItem item = BasicMenuItem.basicMenuItem("Select region -> Clipboard")
+                .withAction(this::handleLightScreenshot);
+
         Menu mainMenu = Menu.menu("Light Screenshot")
-                .addItem(MenuItem.menuItem("Select region -> Clipboard", this::handleLightScreenshot));
+                .withMenuItems(item);
+
         api.userInterface().menuBar().registerMenu(mainMenu);
     }
 
