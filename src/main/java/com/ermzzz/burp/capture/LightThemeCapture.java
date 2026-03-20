@@ -41,7 +41,13 @@ public class LightThemeCapture {
             Robot robot = new Robot();
             Image image = robot.createScreenCapture(region);
 
-            ClipboardCapture.copyImageToClipboard(image, logging);
+            // Clipboard AWT spesso funziona meglio se chiamata sull'EDT
+            try {
+                EventQueue.invokeAndWait(() -> ClipboardCapture.copyImageToClipboard(image, logging));
+            } catch (Exception ignored) {
+                // fallback: tentiamo comunque sul thread corrente
+                ClipboardCapture.copyImageToClipboard(image, logging);
+            }
 
         } catch (Exception e) {
             logging.logToError("Light screenshot capture failed: " + e.getMessage());

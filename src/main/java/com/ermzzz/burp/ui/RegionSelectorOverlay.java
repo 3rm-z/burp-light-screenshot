@@ -17,6 +17,10 @@ public class RegionSelectorOverlay extends JWindow {
         this.callback = callback;
         setAlwaysOnTop(true);
         setBackground(new Color(0, 0, 0, 0));
+        // JWindow non usa setOpaque (non esiste qui), quindi lavoriamo sul content pane
+        getContentPane().setOpaque(false);
+        getContentPane().setBackground(new Color(0, 0, 0, 0));
+        setLayout(null);
         setFocusableWindowState(false);
         setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
 
