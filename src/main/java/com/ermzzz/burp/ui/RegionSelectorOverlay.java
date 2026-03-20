@@ -17,12 +17,12 @@ public class RegionSelectorOverlay extends JWindow {
         this.callback = callback;
         setAlwaysOnTop(true);
         setBackground(new Color(0, 0, 0, 0));
-        // JWindow non usa setOpaque (non esiste qui), quindi lavoriamo sul content pane (che è un Container).
-        // Container non espone setOpaque, quindi facciamo cast a JComponent.
-        if (getContentPane() instanceof JComponent) {
-            ((JComponent) getContentPane()).setOpaque(false);
-            getContentPane().setBackground(new Color(0, 0, 0, 0));
-        }
+        // Rendiamo davvero trasparente il content pane:
+        // JWindow usa il suo content pane per la trasparenza (altrimenti può apparire nero pieno).
+        JPanel content = new JPanel(null);
+        content.setOpaque(false);
+        content.setBackground(new Color(0, 0, 0, 0));
+        setContentPane(content);
         setLayout(null);
         setFocusableWindowState(false);
         setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
