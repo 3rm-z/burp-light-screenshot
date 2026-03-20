@@ -45,6 +45,13 @@ public class BurpExtender implements BurpExtension {
                         JOptionPane.WARNING_MESSAGE);
                 return;
             }
+            if (!(burpFrame instanceof JFrame)) {
+                JOptionPane.showMessageDialog(burpFrame,
+                        "La finestra di Burp non è un JFrame: la selezione regione (glass pane) non è disponibile.",
+                        "Light Screenshot Helper",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
 
             RegionSelectorOverlay.selectRegion(burpFrame, rectangle -> {
                 if (rectangle == null || rectangle.width <= 0 || rectangle.height <= 0) {
