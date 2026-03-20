@@ -26,7 +26,7 @@ public class BurpExtender implements BurpExtension {
 
         api.logging().logToOutput("Light Screenshot Helper loaded");
 
-        BasicMenuItem item = BasicMenuItem.basicMenuItem("Select region -> Clipboard")
+        BasicMenuItem item = BasicMenuItem.basicMenuItem("Select region -> Clipboard (report / chiaro)")
                 .withAction(this::handleLightScreenshot);
 
         Menu mainMenu = Menu.menu("Light Screenshot")
