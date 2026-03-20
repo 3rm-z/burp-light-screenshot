@@ -9,7 +9,9 @@ import java.awt.datatransfer.ClipboardOwner;
 import java.awt.datatransfer.Transferable;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -17,11 +19,10 @@ import java.time.format.DateTimeFormatter;
 
 public class ClipboardCapture {
 
-    /** Mantiene vivo il Transferable finché la clipboard non lo sostituisce (X11). */
     private static Transferable lastTransferable;
 
     /**
-     * Copia l'immagine in clipboard con più strategie (AWT + opzionale xclip su Linux) e salva PNG in /tmp.
+     * Scrive PNG, copia su clipboard (AWT + tool nativi Linux) e logga il path del file.
      */
     public static void copyImageToClipboard(Image image, Logging logging) {
         if (image == null) {
@@ -30,24 +31,26 @@ public class ClipboardCapture {
         try {
             BufferedImage buffered = toBufferedImage(image);
 
-            // 1) AWT system clipboard + owner (evita GC / problemi X11)
+            // 1) Sempre PNG su disco (serve per xclip/wl-copy e fallback utente)
+            Path saved = saveTempPng(buffered);
+            if (saved != null) {
+                logging.logToOutput("Light screenshot: PNG salvato: " + saved.toAbsolutePath());
+            }
+
+            // 2) AWT prima (Windows/macOS; su Linux verrà sovrascritto dal passo 3 se ok)
             Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
             Transferable t = new MultiFlavorImageTransferable(buffered);
             lastTransferable = t;
-            // Owner non-null: su alcuni X11 server evita che il Transferable venga scartato prima del primo incolla.
-            ClipboardOwner owner = (cb, contents) -> { /* ownership persa: normale */ };
+            ClipboardOwner owner = (cb, contents) -> { };
             clipboard.setContents(t, owner);
-            logging.logToOutput("Light screenshot: immagine registrata su system clipboard (AWT).");
+            logging.logToOutput("Light screenshot: system clipboard (AWT) aggiornata.");
 
-            // 2) Linux: AWT spesso non espone PNG ad altre app; pipe nativa (Wayland o X11)
-            if (isLinux()) {
-                tryLinuxNativeClipboardPipe(buffered, logging);
-            }
-
-            // 3) Fallback sempre utile: file su disco
-            Path saved = saveTempPng(buffered);
-            if (saved != null) {
-                logging.logToOutput("Light screenshot: PNG salvato (fallback): " + saved.toAbsolutePath());
+            // 3) Linux per ultimo: xclip/wl-copy da file è ciò che le app X11/Wayland leggono meglio
+            if (isLinux() && saved != null) {
+                boolean nativeOk = tryLinuxClipboardFromFile(saved, logging);
+                if (!nativeOk) {
+                    logging.logToOutput("Light screenshot: xclip/wl-copy non riuscito: resta solo AWT + file PNG.");
+                }
             }
         } catch (Exception e) {
             logging.logToError("Light screenshot: copia in clipboard fallita: " + e.getMessage());
@@ -59,65 +62,86 @@ public class ClipboardCapture {
         return os.toLowerCase().contains("linux");
     }
 
-    private static void tryLinuxNativeClipboardPipe(BufferedImage buffered, Logging logging) {
+    /**
+     * @return true se almeno un metodo nativo ha avuto exit 0
+     */
+    private static boolean tryLinuxClipboardFromFile(Path pngFile, Logging logging) {
         String wayland = System.getenv("WAYLAND_DISPLAY");
         if (wayland != null && !wayland.isEmpty()) {
-            tryWlCopyPng(buffered, logging);
-        } else {
-            tryXclipPng(buffered, logging);
+            return tryWlCopyFromFile(pngFile, logging);
         }
+        return tryXclipFromFile(pngFile, logging);
     }
 
-    private static void tryWlCopyPng(BufferedImage buffered, Logging logging) {
-        try {
-            ProcessBuilder pb = new ProcessBuilder("wl-copy", "--type", "image/png");
-            pb.redirectErrorStream(true);
-            Process p = pb.start();
-            try (OutputStream out = p.getOutputStream()) {
-                ImageIO.write(buffered, "png", out);
+    private static boolean tryWlCopyFromFile(Path pngFile, Logging logging) {
+        String[] bins = {"wl-copy", "/usr/bin/wl-copy", "/bin/wl-copy"};
+        for (String bin : bins) {
+            try {
+                ProcessBuilder pb = new ProcessBuilder(bin, "--type", "image/png");
+                pb.redirectInput(pngFile.toFile());
+                pb.redirectErrorStream(true);
+                Process p = pb.start();
+                String out = readStream(p.getInputStream());
+                int code = p.waitFor();
+                if (code == 0) {
+                    logging.logToOutput("Light screenshot: clipboard immagine via wl-copy (Wayland).");
+                    return true;
+                }
+                if (!out.isBlank()) {
+                    logging.logToOutput("Light screenshot: wl-copy [" + bin + "] exit " + code + ": " + out.trim());
+                }
+            } catch (IOException e) {
+                logging.logToOutput("Light screenshot: wl-copy non eseguibile (" + bin + "): " + e.getMessage());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logging.logToError("Light screenshot: wl-copy interrotto.");
+                return false;
             }
-            int code = p.waitFor();
-            if (code == 0) {
-                logging.logToOutput("Light screenshot: clipboard aggiornata via wl-copy (Wayland, image/png).");
-            } else {
-                logging.logToOutput("Light screenshot: wl-copy terminato con codice " + code + ".");
-            }
-        } catch (IOException e) {
-            logging.logToOutput("Light screenshot: wl-copy non disponibile: " + e.getMessage());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            logging.logToError("Light screenshot: wl-copy interrotto.");
         }
+        return false;
     }
 
-    private static void tryXclipPng(BufferedImage buffered, Logging logging) {
-        try {
-            ProcessBuilder pb = new ProcessBuilder(
-                    "xclip", "-selection", "clipboard", "-t", "image/png", "-i");
-            pb.redirectErrorStream(true);
-            Process p = pb.start();
-            try (OutputStream out = p.getOutputStream()) {
-                ImageIO.write(buffered, "png", out);
+    private static boolean tryXclipFromFile(Path pngFile, Logging logging) {
+        String[] bins = {"/usr/bin/xclip", "/bin/xclip", "xclip"};
+        for (String bin : bins) {
+            try {
+                ProcessBuilder pb = new ProcessBuilder(
+                        bin, "-selection", "clipboard", "-t", "image/png");
+                pb.redirectInput(pngFile.toFile());
+                pb.redirectErrorStream(true);
+                Process p = pb.start();
+                String out = readStream(p.getInputStream());
+                int code = p.waitFor();
+                if (code == 0) {
+                    logging.logToOutput("Light screenshot: clipboard immagine via xclip (X11).");
+                    return true;
+                }
+                if (!out.isBlank()) {
+                    logging.logToOutput("Light screenshot: xclip [" + bin + "] exit " + code + ": " + out.trim());
+                }
+            } catch (IOException e) {
+                logging.logToOutput("Light screenshot: xclip non eseguibile (" + bin + "): " + e.getMessage());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logging.logToError("Light screenshot: xclip interrotto.");
+                return false;
             }
-            int code = p.waitFor();
-            if (code == 0) {
-                logging.logToOutput("Light screenshot: clipboard aggiornata anche via xclip (image/png).");
-            } else {
-                logging.logToOutput("Light screenshot: xclip terminato con codice " + code + " (installa xclip se vuoi clipboard PNG su Linux).");
-            }
-        } catch (IOException e) {
-            logging.logToOutput("Light screenshot: xclip non disponibile o fallito: " + e.getMessage());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            logging.logToError("Light screenshot: xclip interrotto.");
         }
+        return false;
+    }
+
+    private static String readStream(InputStream is) throws IOException {
+        byte[] b = is.readAllBytes();
+        return new String(b, StandardCharsets.UTF_8);
     }
 
     private static Path saveTempPng(BufferedImage buffered) {
         try {
             String ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
             Path p = Files.createTempFile("burp-light-screenshot-", "-" + ts + ".png");
-            ImageIO.write(buffered, "png", p.toFile());
+            try (OutputStream os = Files.newOutputStream(p)) {
+                ImageIO.write(buffered, "png", os);
+            }
             return p;
         } catch (IOException e) {
             return null;
