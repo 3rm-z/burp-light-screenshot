@@ -43,12 +43,8 @@ public class ClipboardCapture {
                 logging.logToOutput("Light screenshot: PNG salvato: " + saved.toAbsolutePath());
             }
 
-            // Su Linux/X11 l’AWT spesso non incolla in altre app e può “rubare” ownership alla clipboard:
-            // usiamo solo xclip/wl-copy (vedi tryLinuxClipboardFromFile).
             if (!isLinux()) {
                 setAwtClipboardContents(buffered, logging);
-            } else {
-                logging.logToOutput("Light screenshot: Linux — salto clipboard AWT, uso xclip/wl-copy.");
             }
 
             if (isWindows() && saved != null) {
@@ -59,8 +55,10 @@ public class ClipboardCapture {
                 linuxSleepAfterPngWrite();
                 boolean nativeOk = tryLinuxClipboardFromFile(saved, logging);
                 if (!nativeOk) {
-                    logging.logToOutput("Light screenshot: xclip/wl-copy non riuscito. File PNG salvato sopra; "
-                            + "nota: molte VM sincronizzano verso Windows solo testo, non immagini.");
+                    logging.logToOutput("Light screenshot: xclip/wl-copy non riuscito — provo fallback AWT.");
+                    setAwtClipboardContents(buffered, logging);
+                    logging.logToOutput("Light screenshot: File PNG salvato sopra; "
+                            + "VM→host spesso sincronizza solo testo, non immagini.");
                 }
             }
         } catch (Exception e) {
@@ -259,13 +257,28 @@ public class ClipboardCapture {
         return clipboardOk;
     }
 
+    /**
+     * Alcune build di xclip falliscono con {@code -i} o con ordine argomenti; proviamo più varianti + pipe shell.
+     */
     private static boolean runXclip(String bin, Path pngFile, String selection, Logging logging) {
+        if (runXclipVariant(bin, pngFile, selection, logging, false)) {
+            return true;
+        }
+        if (runXclipVariant(bin, pngFile, selection, logging, true)) {
+            return true;
+        }
+        if (runXclipVariantOrder2(bin, pngFile, selection, logging)) {
+            return true;
+        }
+        return runXclipShellCatPipe(bin, pngFile, selection, logging);
+    }
+
+    /** {@code xclip [-i] -selection S -t image/png} + stdin da file. */
+    private static boolean runXclipVariant(String bin, Path pngFile, String selection, Logging logging, boolean dashI) {
         try {
-            ProcessBuilder pb = new ProcessBuilder(
-                    bin,
-                    "-i",
-                    "-selection", selection,
-                    "-t", "image/png");
+            ProcessBuilder pb = dashI
+                    ? new ProcessBuilder(bin, "-i", "-selection", selection, "-t", "image/png")
+                    : new ProcessBuilder(bin, "-selection", selection, "-t", "image/png");
             pb.redirectInput(pngFile.toFile());
             applyLinuxX11Env(pb);
             pb.redirectErrorStream(true);
@@ -275,18 +288,75 @@ public class ClipboardCapture {
             if (code == 0) {
                 return true;
             }
-            if (!out.isBlank()) {
-                logging.logToOutput("Light screenshot: xclip [" + bin + "] selection=" + selection + " exit " + code + ": " + out.trim());
-            } else if (code != 0) {
-                logging.logToOutput("Light screenshot: xclip [" + bin + "] selection=" + selection + " exit " + code);
-            }
+            logXclipFail(bin, selection, code, out, logging, dashI ? "con -i" : "senza -i");
         } catch (IOException e) {
-            logging.logToOutput("Light screenshot: xclip [" + bin + "] selection=" + selection + ": " + e.getMessage());
+            logging.logToOutput("Light screenshot: xclip [" + bin + "] " + selection + ": " + e.getMessage());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             logging.logToError("Light screenshot: xclip interrotto.");
         }
         return false;
+    }
+
+    /** {@code xclip -t image/png -selection S} */
+    private static boolean runXclipVariantOrder2(String bin, Path pngFile, String selection, Logging logging) {
+        try {
+            ProcessBuilder pb = new ProcessBuilder(bin, "-t", "image/png", "-selection", selection);
+            pb.redirectInput(pngFile.toFile());
+            applyLinuxX11Env(pb);
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String out = readStream(p.getInputStream());
+            int code = p.waitFor();
+            if (code == 0) {
+                return true;
+            }
+            logXclipFail(bin, selection, code, out, logging, "ordine -t prima");
+        } catch (IOException e) {
+            logging.logToOutput("Light screenshot: xclip ordine2 [" + bin + "]: " + e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logging.logToError("Light screenshot: xclip interrotto.");
+        }
+        return false;
+    }
+
+    /** {@code cat file | xclip ...} (stesso ambiente di una shell login). */
+    private static boolean runXclipShellCatPipe(String bin, Path pngFile, String selection, Logging logging) {
+        try {
+            String pathEsc = shellSingleQuoted(pngFile.toAbsolutePath().toString());
+            String binEsc = shellSingleQuoted(bin);
+            String sh = String.format("cat %s | %s -selection %s -t image/png", pathEsc, binEsc, selection);
+            ProcessBuilder pb = new ProcessBuilder("/bin/sh", "-c", sh);
+            applyLinuxX11Env(pb);
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String out = readStream(p.getInputStream());
+            int code = p.waitFor();
+            if (code == 0) {
+                logging.logToOutput("Light screenshot: xclip via sh pipe OK [" + bin + "] selection=" + selection);
+                return true;
+            }
+            logXclipFail(bin, selection, code, out, logging, "sh pipe");
+        } catch (IOException e) {
+            logging.logToOutput("Light screenshot: xclip sh pipe: " + e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logging.logToError("Light screenshot: xclip interrotto.");
+        }
+        return false;
+    }
+
+    private static String shellSingleQuoted(String s) {
+        return "'" + s.replace("'", "'\"'\"'") + "'";
+    }
+
+    private static void logXclipFail(String bin, String selection, int code, String out, Logging logging, String variant) {
+        if (!out.isBlank()) {
+            logging.logToOutput("Light screenshot: xclip [" + bin + "] " + variant + " selection=" + selection + " exit " + code + ": " + out.trim());
+        } else {
+            logging.logToOutput("Light screenshot: xclip [" + bin + "] " + variant + " selection=" + selection + " exit " + code);
+        }
     }
 
     private static String readStream(InputStream is) throws IOException {

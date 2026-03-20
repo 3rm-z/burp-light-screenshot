@@ -54,7 +54,7 @@ Obiettivo: dare un feedback **ripetibile** senza parole vaghe.
 
 ## Linux (Kali, i3, X11)
 
-L’estensione usa **`xclip`** (`sudo apt install xclip`) con `-i -selection clipboard -t image/png` e **non** usa la clipboard AWT Java su Linux (evita conflitti con X11).
+L’estensione prova **`xclip`** in più modi (senza/s con `-i`, ordine argomenti, `cat | xclip` via `/bin/sh`) e, se tutto fallisce, **fallback AWT** (`sudo apt install xclip`).
 
 - In **Output** compaiono `DISPLAY=…` e l’esito di `xclip`; se `DISPLAY` è “non impostato”, avvia Burp dallo stesso contesto dove hai X11 (es. da terminale dentro la sessione grafica).
 - Viene copiata anche la selection **`primary`** (incolla con **tasto centrale** in alcune app).

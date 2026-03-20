@@ -97,6 +97,8 @@ public final class DocumentLightFilter {
         }
 
         applyLuminanceHistogramStretch(out);
+        // Avvicina a palette tipo FlatLaf light (target da confronto tema Burp reale)
+        FlatLafApproxFilter.apply(out);
         return out;
     }
 
