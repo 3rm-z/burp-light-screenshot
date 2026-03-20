@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 
 public class ClipboardCapture {
 
@@ -42,19 +43,24 @@ public class ClipboardCapture {
                 logging.logToOutput("Light screenshot: PNG salvato: " + saved.toAbsolutePath());
             }
 
-            // 2) AWT (Windows: spesso OK dal thread worker; Linux: meglio EDT — vedi setAwtClipboardContents)
-            setAwtClipboardContents(buffered, logging);
+            // Su Linux/X11 l’AWT spesso non incolla in altre app e può “rubare” ownership alla clipboard:
+            // usiamo solo xclip/wl-copy (vedi tryLinuxClipboardFromFile).
+            if (!isLinux()) {
+                setAwtClipboardContents(buffered, logging);
+            } else {
+                logging.logToOutput("Light screenshot: Linux — salto clipboard AWT, uso xclip/wl-copy.");
+            }
 
-            // 3) Windows: WinForms clipboard da file (spesso più affidabile dell’AWT puro con Burp)
             if (isWindows() && saved != null) {
                 tryWindowsClipboardFromPngFile(saved, logging);
             }
 
-            // 4) Linux per ultimo: xclip/wl-copy da file
             if (isLinux() && saved != null) {
+                linuxSleepAfterPngWrite();
                 boolean nativeOk = tryLinuxClipboardFromFile(saved, logging);
                 if (!nativeOk) {
-                    logging.logToOutput("Light screenshot: xclip/wl-copy non riuscito: resta solo AWT + file PNG.");
+                    logging.logToOutput("Light screenshot: xclip/wl-copy non riuscito. File PNG salvato sopra; "
+                            + "nota: molte VM sincronizzano verso Windows solo testo, non immagini.");
                 }
             }
         } catch (Exception e) {
@@ -144,15 +150,59 @@ public class ClipboardCapture {
         return os.toLowerCase().contains("linux");
     }
 
+    private static void linuxSleepAfterPngWrite() {
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private static void logLinuxClipboardEnv(Logging logging) {
+        logging.logToOutput("Light screenshot: DISPLAY=" + envOrDash("DISPLAY")
+                + " WAYLAND_DISPLAY=" + envOrDash("WAYLAND_DISPLAY")
+                + " XDG_SESSION_TYPE=" + envOrDash("XDG_SESSION_TYPE"));
+    }
+
+    private static String envOrDash(String name) {
+        String v = System.getenv(name);
+        return v == null || v.isEmpty() ? "(non impostato)" : v;
+    }
+
+    private static void applyLinuxX11Env(ProcessBuilder pb) {
+        Map<String, String> env = pb.environment();
+        copyEnvIfPresent(env, "DISPLAY");
+        copyEnvIfPresent(env, "XAUTHORITY");
+    }
+
+    private static void copyEnvIfPresent(Map<String, String> env, String key) {
+        String v = System.getenv(key);
+        if (v != null && !v.isEmpty()) {
+            env.put(key, v);
+        }
+    }
+
     /**
-     * @return true se almeno un metodo nativo ha avuto exit 0
+     * Su i3/X11 conviene xclip anche se WAYLAND_DISPLAY è settato (XWayland / sessioni ibride).
+     *
+     * @return true se la selection {@code clipboard} è stata impostata con successo
      */
     private static boolean tryLinuxClipboardFromFile(Path pngFile, Logging logging) {
+        logLinuxClipboardEnv(logging);
+        String display = System.getenv("DISPLAY");
         String wayland = System.getenv("WAYLAND_DISPLAY");
-        if (wayland != null && !wayland.isEmpty()) {
-            return tryWlCopyFromFile(pngFile, logging);
+
+        boolean ok = false;
+        if (display != null && !display.isEmpty()) {
+            ok = tryXclipFromFile(pngFile, logging);
         }
-        return tryXclipFromFile(pngFile, logging);
+        if (!ok && wayland != null && !wayland.isEmpty()) {
+            ok = tryWlCopyFromFile(pngFile, logging);
+        }
+        if (!ok) {
+            ok = tryXclipFromFile(pngFile, logging);
+        }
+        return ok;
     }
 
     private static boolean tryWlCopyFromFile(Path pngFile, Logging logging) {
@@ -161,6 +211,7 @@ public class ClipboardCapture {
             try {
                 ProcessBuilder pb = new ProcessBuilder(bin, "--type", "image/png");
                 pb.redirectInput(pngFile.toFile());
+                applyLinuxX11Env(pb);
                 pb.redirectErrorStream(true);
                 Process p = pb.start();
                 String out = readStream(p.getInputStream());
@@ -183,31 +234,57 @@ public class ClipboardCapture {
         return false;
     }
 
+    /**
+     * {@code xclip -i} legge da stdin; alcune build si aspettano {@code -i} esplicito.
+     * Copia anche su {@code primary} (incolla col tasto centrale su X11).
+     */
     private static boolean tryXclipFromFile(Path pngFile, Logging logging) {
         String[] bins = {"/usr/bin/xclip", "/bin/xclip", "xclip"};
+        boolean clipboardOk = false;
         for (String bin : bins) {
-            try {
-                ProcessBuilder pb = new ProcessBuilder(
-                        bin, "-selection", "clipboard", "-t", "image/png");
-                pb.redirectInput(pngFile.toFile());
-                pb.redirectErrorStream(true);
-                Process p = pb.start();
-                String out = readStream(p.getInputStream());
-                int code = p.waitFor();
-                if (code == 0) {
-                    logging.logToOutput("Light screenshot: clipboard immagine via xclip (X11).");
-                    return true;
-                }
-                if (!out.isBlank()) {
-                    logging.logToOutput("Light screenshot: xclip [" + bin + "] exit " + code + ": " + out.trim());
-                }
-            } catch (IOException e) {
-                logging.logToOutput("Light screenshot: xclip non eseguibile (" + bin + "): " + e.getMessage());
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                logging.logToError("Light screenshot: xclip interrotto.");
-                return false;
+            if (runXclip(bin, pngFile, "clipboard", logging)) {
+                logging.logToOutput("Light screenshot: clipboard immagine via xclip (selection=clipboard) [" + bin + "].");
+                clipboardOk = true;
+                break;
             }
+        }
+        if (clipboardOk) {
+            for (String bin : bins) {
+                if (runXclip(bin, pngFile, "primary", logging)) {
+                    logging.logToOutput("Light screenshot: xclip anche selection=primary (middle-click) [" + bin + "].");
+                    break;
+                }
+            }
+        }
+        return clipboardOk;
+    }
+
+    private static boolean runXclip(String bin, Path pngFile, String selection, Logging logging) {
+        try {
+            ProcessBuilder pb = new ProcessBuilder(
+                    bin,
+                    "-i",
+                    "-selection", selection,
+                    "-t", "image/png");
+            pb.redirectInput(pngFile.toFile());
+            applyLinuxX11Env(pb);
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String out = readStream(p.getInputStream());
+            int code = p.waitFor();
+            if (code == 0) {
+                return true;
+            }
+            if (!out.isBlank()) {
+                logging.logToOutput("Light screenshot: xclip [" + bin + "] selection=" + selection + " exit " + code + ": " + out.trim());
+            } else if (code != 0) {
+                logging.logToOutput("Light screenshot: xclip [" + bin + "] selection=" + selection + " exit " + code);
+            }
+        } catch (IOException e) {
+            logging.logToOutput("Light screenshot: xclip [" + bin + "] selection=" + selection + ": " + e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logging.logToError("Light screenshot: xclip interrotto.");
         }
         return false;
     }

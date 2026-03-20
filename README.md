@@ -52,9 +52,13 @@ Obiettivo: dare un feedback **ripetibile** senza parole vaghe.
 5. **In codice** (se un giorno servisse)  
    Si può aggiungere un log opzionale: luminanza media dell’immagine filtrata, o export side-by-side raw/filtrato.
 
-## Linux
+## Linux (Kali, i3, X11)
 
-Utile avere `xclip` (X11) o `wl-copy` (Wayland) per la clipboard immagine.
+L’estensione usa **`xclip`** (`sudo apt install xclip`) con `-i -selection clipboard -t image/png` e **non** usa la clipboard AWT Java su Linux (evita conflitti con X11).
+
+- In **Output** compaiono `DISPLAY=…` e l’esito di `xclip`; se `DISPLAY` è “non impostato”, avvia Burp dallo stesso contesto dove hai X11 (es. da terminale dentro la sessione grafica).
+- Viene copiata anche la selection **`primary`** (incolla con **tasto centrale** in alcune app).
+- **VM → Windows**: molti hypervisor sincronizzano la clipboard **solo testo** verso l’host. Se su Kali `xclip` ha exit 0 ma su Windows non vedi l’immagine, è spesso un limite del guest: usa il **file PNG** in `/tmp` o una cartella condivisa.
 
 ## Windows
 

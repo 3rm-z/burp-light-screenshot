@@ -5,7 +5,8 @@ Ordine approssimativo; spunta o riordina quando serve.
 ## Bug / affidabilità
 
 - [x] **Freeze UI / riquadro grigio**: cattura + clipboard spostate su thread di lavoro; AWT clipboard con `invokeAndWait` sull’EDT; glass pane ripristinato in `finally`
-- [ ] **Clipboard Linux**: ancora non incolla in alcuni setup — indagare `DISPLAY`, sandbox Flatpak, `xclip` vs `xsel`, test con `xclip -o -selection clipboard -t TARGETS` dopo copia
+- [ ] **Clipboard Linux / VM→host**: se `xclip` exit 0 ma l’immagine non arriva su Windows → spesso sync guest solo **testo**; workaround = PNG in `/tmp` o cartella condivisa
+- [x] **Clipboard Linux (Kali/i3)**: niente AWT; `xclip -i`; `DISPLAY`/`XAUTHORITY`; clipboard + primary; prova xclip prima se `DISPLAY` settato (ibrido Wayland)
 - [x] **Clipboard Windows**: AWT dal worker + fallback PowerShell WinForms (`ClipboardCapture`)
 - [ ] **Conferma** che Burp non venga più avviato in modo che `PATH` non includa `/usr/bin` (GUI vs terminale)
 
