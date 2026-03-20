@@ -1,4 +1,4 @@
-package com.ermzzz.burp.capture;
+ package com.ermzzz.burp.capture;
 
 import burp.api.montoya.logging.Logging;
 
@@ -24,7 +24,11 @@ public class LightThemeCapture {
             List<Frame> burpFrames = findVisibleBurpFrames();
             runOnEdtAndWait(() -> {
                 if (lightLaf != null && !lightLaf.equals(originalLaf)) {
-                    UIManager.setLookAndFeel(lightLaf);
+                    try {
+                        UIManager.setLookAndFeel(lightLaf);
+                    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException ex) {
+                        logging.logToError("Light screenshot: setLookAndFeel light failed: " + ex.getMessage());
+                    }
                 }
                 for (Frame f : burpFrames) {
                     SwingUtilities.updateComponentTreeUI(f);
@@ -47,7 +51,11 @@ public class LightThemeCapture {
                 List<Frame> burpFrames = findVisibleBurpFrames();
                 runOnEdtAndWait(() -> {
                     if (originalLaf != null && !originalLaf.equals(UIManager.getLookAndFeel().getClass().getName())) {
-                        UIManager.setLookAndFeel(originalLaf);
+                        try {
+                            UIManager.setLookAndFeel(originalLaf);
+                        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException ex) {
+                            logging.logToError("Light screenshot: restore LookAndFeel failed: " + ex.getMessage());
+                        }
                     }
                     for (Frame f : burpFrames) {
                         SwingUtilities.updateComponentTreeUI(f);
