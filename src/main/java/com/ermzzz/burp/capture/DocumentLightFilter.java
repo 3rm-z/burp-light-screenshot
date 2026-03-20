@@ -1,5 +1,6 @@
 package com.ermzzz.burp.capture;
 
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 
 /**
@@ -15,14 +16,17 @@ import java.awt.image.BufferedImage;
 public final class DocumentLightFilter {
 
     /** Luminanza output per pixel che erano “inchiostro” (testo chiaro sul dark). */
-    private static final float INK_L = 0.07f;
-    /** Luminanza output per pixel che erano sfondo scuro. */
-    private static final float PAPER_L = 0.97f;
+    private static final float INK_L = 0.045f;
+    /** Luminanza output per pixel che erano sfondo scuro (quasi bianco carta). */
+    private static final float PAPER_L = 0.988f;
     /**
-     * Curva sulla luminanza in ingresso [0–1]: &lt; 1 stringe la zona centrale (più contrasto
-     * tra sfondo e contenuto).
+     * Curva sulla luminanza in ingresso: valori più alti schiariscono i mid-tone (meno “sotto ombra”).
      */
-    private static final float GAMMA = 0.58f;
+    private static final float GAMMA = 0.72f;
+    /** Moltiplicatore saturazione in uscita (1 = invariato). */
+    private static final float SATURATION_BOOST = 1.24f;
+    /** Leggero lift sulla luminosità HSB (value). */
+    private static final float VALUE_BOOST = 1.07f;
     /** Evita scale esplosive sul rumore/cerniere nere. */
     private static final float LUM_FLOOR = 0.018f;
     /** Limite scala RGB per pixel rumorosissimi. */
@@ -72,7 +76,11 @@ public final class DocumentLightFilter {
                 int ri = Math.round(r2 * 255f);
                 int gi = Math.round(g2 * 255f);
                 int bi = Math.round(b2 * 255f);
-                int rgb = (ri << 16) | (gi << 8) | bi;
+
+                float[] hsb = Color.RGBtoHSB(ri, gi, bi, null);
+                hsb[1] = clamp01(hsb[1] * SATURATION_BOOST);
+                hsb[2] = clamp01(hsb[2] * VALUE_BOOST);
+                int rgb = Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]) & 0xFFFFFF;
                 out.setRGB(x, y, rgb);
             }
         }

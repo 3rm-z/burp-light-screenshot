@@ -10,7 +10,7 @@ Ordine approssimativo; spunta o riordina quando serve.
 
 ## Qualità immagine
 
-- [ ] Ridurre effetto “sotto ombra” / grigiastro nel filtro report (gamma, saturazione leggera, o curva separata per mid-tones)
+- [ ] Affinare ancora filtro report se serve (dopo tuning gamma/saturazione/value)
 - [ ] Opzione menu **screenshot senza filtro** (tema scuro originale 1:1) per confronto / report dove va bene il dark
 
 ## UX
