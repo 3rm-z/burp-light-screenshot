@@ -56,6 +56,10 @@ Obiettivo: dare un feedback **ripetibile** senza parole vaghe.
 
 Utile avere `xclip` (X11) o `wl-copy` (Wayland) per la clipboard immagine.
 
+## Windows
+
+Se l’incolla immagine non funziona solo con AWT, l’estensione prova anche **PowerShell** (`powershell.exe -Sta`) con `System.Windows.Forms.Clipboard::SetImage` sul PNG in `%TEMP%`. Serve che PowerShell sia nel `PATH` (normale su Windows 10/11).
+
 ## TODO
 
 Vedi `TODO.md` nel repo.

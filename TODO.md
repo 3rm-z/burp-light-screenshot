@@ -6,6 +6,7 @@ Ordine approssimativo; spunta o riordina quando serve.
 
 - [x] **Freeze UI / riquadro grigio**: cattura + clipboard spostate su thread di lavoro; AWT clipboard con `invokeAndWait` sull’EDT; glass pane ripristinato in `finally`
 - [ ] **Clipboard Linux**: ancora non incolla in alcuni setup — indagare `DISPLAY`, sandbox Flatpak, `xclip` vs `xsel`, test con `xclip -o -selection clipboard -t TARGETS` dopo copia
+- [x] **Clipboard Windows**: AWT dal worker + fallback PowerShell WinForms (`ClipboardCapture`)
 - [ ] **Conferma** che Burp non venga più avviato in modo che `PATH` non includa `/usr/bin` (GUI vs terminale)
 
 ## Qualità immagine

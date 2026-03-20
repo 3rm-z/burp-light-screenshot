@@ -30,10 +30,10 @@ public final class DocumentLightFilter {
     private static final float SATURATION_BOOST = 1.38f;
     /** Lift value massimo su pixel poco saturi (carta / testo neutro). */
     private static final float VALUE_BOOST = 1.08f;
-    /** Evita scale esplosive sul rumore/cerniere nere. */
+    /** Evita scale infinite sul rumore; deve essere ≥ {@code PAPER_L / LUM_FLOOR} (~55) altrimenti gli sfondi scuri non arrivano mai al bianco e resta tutto grigiastro. */
     private static final float LUM_FLOOR = 0.018f;
-    /** Limite scala RGB per pixel rumorosissimi. */
-    private static final float SCALE_CAP = 32f;
+    /** Prima era 32 → tagliava la scala sui pixel quasi neri: effetto “velo grigio” uniforme sullo screenshot. */
+    private static final float SCALE_CAP = 58f;
 
     private DocumentLightFilter() {
     }

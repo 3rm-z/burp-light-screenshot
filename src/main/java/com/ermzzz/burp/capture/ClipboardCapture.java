@@ -42,10 +42,15 @@ public class ClipboardCapture {
                 logging.logToOutput("Light screenshot: PNG salvato: " + saved.toAbsolutePath());
             }
 
-            // 2) AWT: molte JVM si aspettano setContents sull’EDT (breve, non blocca come xclip)
+            // 2) AWT (Windows: spesso OK dal thread worker; Linux: meglio EDT — vedi setAwtClipboardContents)
             setAwtClipboardContents(buffered, logging);
 
-            // 3) Linux per ultimo: xclip/wl-copy da file (può attendere — deve restare fuori EDT)
+            // 3) Windows: WinForms clipboard da file (spesso più affidabile dell’AWT puro con Burp)
+            if (isWindows() && saved != null) {
+                tryWindowsClipboardFromPngFile(saved, logging);
+            }
+
+            // 4) Linux per ultimo: xclip/wl-copy da file
             if (isLinux() && saved != null) {
                 boolean nativeOk = tryLinuxClipboardFromFile(saved, logging);
                 if (!nativeOk) {
@@ -58,30 +63,79 @@ public class ClipboardCapture {
     }
 
     private static void setAwtClipboardContents(BufferedImage buffered, Logging logging) {
-        Runnable task = () -> {
-            try {
-                Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-                Transferable t = new MultiFlavorImageTransferable(buffered);
-                lastTransferable = t;
-                ClipboardOwner owner = (cb, contents) -> { };
-                clipboard.setContents(t, owner);
-                logging.logToOutput("Light screenshot: system clipboard (AWT) aggiornata.");
-            } catch (Exception e) {
-                logging.logToError("Light screenshot: AWT clipboard: " + e.getMessage());
-            }
-        };
         if (SwingUtilities.isEventDispatchThread()) {
-            task.run();
+            doAwtClipboardSet(buffered, logging);
             return;
         }
+        // Su Windows Burp spesso accetta setContents dal worker; invokeAndWait può fallire o andare in stallo in alcuni setup.
+        if (isWindows()) {
+            try {
+                doAwtClipboardSet(buffered, logging);
+                return;
+            } catch (Exception e) {
+                logging.logToOutput("Light screenshot: AWT da worker fallita, provo su EDT: " + e.getMessage());
+            }
+        }
         try {
-            SwingUtilities.invokeAndWait(task);
+            SwingUtilities.invokeAndWait(() -> {
+                try {
+                    doAwtClipboardSet(buffered, logging);
+                } catch (Exception e) {
+                    logging.logToError("Light screenshot: AWT clipboard (EDT): " + e.getMessage());
+                }
+            });
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             logging.logToError("Light screenshot: AWT clipboard interrotta.");
         } catch (InvocationTargetException e) {
             Throwable c = e.getCause();
-            logging.logToError("Light screenshot: AWT clipboard: " + (c != null ? c.getMessage() : e.getMessage()));
+            logging.logToError("Light screenshot: AWT clipboard (EDT): " + (c != null ? c.getMessage() : e.getMessage()));
+        }
+    }
+
+    private static void doAwtClipboardSet(BufferedImage buffered, Logging logging) {
+        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        Transferable t = new MultiFlavorImageTransferable(buffered);
+        lastTransferable = t;
+        ClipboardOwner owner = (cb, contents) -> { };
+        clipboard.setContents(t, owner);
+        logging.logToOutput("Light screenshot: system clipboard (AWT) aggiornata.");
+    }
+
+    private static boolean isWindows() {
+        return System.getProperty("os.name", "").toLowerCase().contains("win");
+    }
+
+    /**
+     * Clipboard immagine tramite PowerShell + WinForms (STA). Utile quando l’AWT clipboard con Burp non incolla.
+     */
+    private static void tryWindowsClipboardFromPngFile(Path pngFile, Logging logging) {
+        String path = pngFile.toAbsolutePath().toString().replace("'", "''");
+        String command = String.format(
+                "Add-Type -AssemblyName System.Windows.Forms; "
+                        + "Add-Type -AssemblyName System.Drawing; "
+                        + "$i = [System.Drawing.Image]::FromFile('%s'); "
+                        + "[System.Windows.Forms.Clipboard]::SetImage($i); "
+                        + "$i.Dispose()",
+                path);
+        String[] cmd = {"powershell.exe", "-NoProfile", "-Sta", "-Command", command};
+        try {
+            ProcessBuilder pb = new ProcessBuilder(cmd);
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String out = readStream(p.getInputStream());
+            int code = p.waitFor();
+            if (code == 0) {
+                logging.logToOutput("Light screenshot: clipboard immagine via PowerShell (WinForms).");
+            } else {
+                logging.logToOutput("Light screenshot: PowerShell clipboard exit " + code
+                        + (out.isBlank() ? "" : (": " + out.trim())));
+            }
+        } catch (IOException e) {
+            logging.logToOutput("Light screenshot: PowerShell clipboard non eseguibile: " + e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logging.logToError("Light screenshot: PowerShell clipboard interrotto.");
         }
     }
 
