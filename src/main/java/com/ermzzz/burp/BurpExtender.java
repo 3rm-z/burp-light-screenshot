@@ -59,12 +59,9 @@ public class BurpExtender implements BurpExtension {
                     return;
                 }
                 api.logging().logToOutput("Light screenshot: regione selezionata " + rectangle);
-                // Non blocchiamo l'EDT: l'overlay deve sparire subito, mentre lo screenshot/cambio tema può richiedere tempo.
-                Thread t = new Thread(() ->
-                        LightThemeCapture.captureRegionToClipboard(burpFrame, rectangle, api.logging()),
-                        "light-theme-capture");
-                t.setDaemon(true);
-                t.start();
+                // Montoya Logging è affidabile sull'EDT: eseguiamo tutta la capture sul EDT (dopo il rilascio mouse).
+                SwingUtilities.invokeLater(() ->
+                        LightThemeCapture.captureRegionToClipboard(burpFrame, rectangle, api.logging()));
             });
         });
     }

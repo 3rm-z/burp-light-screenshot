@@ -1,9 +1,11 @@
- package com.ermzzz.burp.capture;
+package com.ermzzz.burp.capture;
 
 import burp.api.montoya.logging.Logging;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -18,6 +20,7 @@ public class LightThemeCapture {
         LookAndFeel originalLookAndFeel = UIManager.getLookAndFeel();
 
         try {
+            logging.logToOutput("Light screenshot: avvio capture (region=" + region + ")");
             // switch a un L&F chiaro (Nimbus se disponibile, altrimenti Metal)
             String lightLaf = findLightLookAndFeelClassName(logging);
 
@@ -39,18 +42,18 @@ public class LightThemeCapture {
             });
 
             Robot robot = new Robot();
+            logging.logToOutput("Light screenshot: Robot creato, cattura schermo...");
             Image image = robot.createScreenCapture(region);
+            logging.logToOutput("Light screenshot: cattura completata (" + image.getWidth(null) + "x" + image.getHeight(null) + ")");
 
-            // Clipboard AWT spesso funziona meglio se chiamata sull'EDT
-            try {
-                EventQueue.invokeAndWait(() -> ClipboardCapture.copyImageToClipboard(image, logging));
-            } catch (Exception ignored) {
-                // fallback: tentiamo comunque sul thread corrente
-                ClipboardCapture.copyImageToClipboard(image, logging);
-            }
+            // Siamo già sull'EDT (invokeLater da BurpExtender): copia diretta
+            ClipboardCapture.copyImageToClipboard(image, logging);
 
-        } catch (Exception e) {
-            logging.logToError("Light screenshot capture failed: " + e.getMessage());
+        } catch (Throwable t) {
+            logging.logToError("Light screenshot capture failed: " + t);
+            StringWriter sw = new StringWriter();
+            t.printStackTrace(new PrintWriter(sw));
+            logging.logToError(sw.toString());
         } finally {
             // ripristina L&F originale su tutti i frame Burp visibili
             try {
