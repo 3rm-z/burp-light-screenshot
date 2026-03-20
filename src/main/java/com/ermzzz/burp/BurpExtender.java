@@ -59,9 +59,9 @@ public class BurpExtender implements BurpExtension {
                     return;
                 }
                 api.logging().logToOutput("Light screenshot: regione selezionata " + rectangle);
-                // Montoya Logging è affidabile sull'EDT: eseguiamo tutta la capture sul EDT (dopo il rilascio mouse).
-                SwingUtilities.invokeLater(() ->
-                        LightThemeCapture.captureRegionToClipboard(burpFrame, rectangle, api.logging()));
+                // Robot + filtro + xclip/wl-copy NON vanno sull’EDT: bloccherebbero Burp e il repaint del glass pane.
+                new Thread(() -> LightThemeCapture.captureRegionToClipboard(burpFrame, rectangle, api.logging()),
+                        "burp-light-screenshot").start();
             });
         });
     }

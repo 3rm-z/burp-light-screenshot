@@ -19,6 +19,10 @@ public final class LightThemeCapture {
     private LightThemeCapture() {
     }
 
+    /**
+     * Esegui da un thread di lavoro (non EDT): {@link Robot}, filtro pixel e clipboard nativa
+     * possono bloccare a lungo; sull’EDT congelerebbero l’interfaccia.
+     */
     public static void captureRegionToClipboard(Frame burpFrame, Rectangle region, Logging logging) {
         if (burpFrame == null || region == null) {
             return;

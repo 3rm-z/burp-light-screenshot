@@ -3,6 +3,7 @@ package com.ermzzz.burp.capture;
 import burp.api.montoya.logging.Logging;
 
 import javax.imageio.ImageIO;
+import javax.swing.SwingUtilities;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.ClipboardOwner;
@@ -11,6 +12,7 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,7 +24,10 @@ public class ClipboardCapture {
     private static Transferable lastTransferable;
 
     /**
-     * Scrive PNG, copia su clipboard (AWT + tool nativi Linux) e logga il path del file.
+     * Scrive PNG, copia su clipboard (AWT su EDT + tool nativi Linux sul thread chiamante) e logga il path.
+     * <p>
+     * Chiamare da un <strong>thread di lavoro</strong>, non dall’EDT: così {@code waitFor()} di xclip/wl-copy
+     * non blocca l’interfaccia di Burp.
      */
     public static void copyImageToClipboard(Image image, Logging logging) {
         if (image == null) {
@@ -37,15 +42,10 @@ public class ClipboardCapture {
                 logging.logToOutput("Light screenshot: PNG salvato: " + saved.toAbsolutePath());
             }
 
-            // 2) AWT prima (Windows/macOS; su Linux verrà sovrascritto dal passo 3 se ok)
-            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-            Transferable t = new MultiFlavorImageTransferable(buffered);
-            lastTransferable = t;
-            ClipboardOwner owner = (cb, contents) -> { };
-            clipboard.setContents(t, owner);
-            logging.logToOutput("Light screenshot: system clipboard (AWT) aggiornata.");
+            // 2) AWT: molte JVM si aspettano setContents sull’EDT (breve, non blocca come xclip)
+            setAwtClipboardContents(buffered, logging);
 
-            // 3) Linux per ultimo: xclip/wl-copy da file è ciò che le app X11/Wayland leggono meglio
+            // 3) Linux per ultimo: xclip/wl-copy da file (può attendere — deve restare fuori EDT)
             if (isLinux() && saved != null) {
                 boolean nativeOk = tryLinuxClipboardFromFile(saved, logging);
                 if (!nativeOk) {
@@ -54,6 +54,34 @@ public class ClipboardCapture {
             }
         } catch (Exception e) {
             logging.logToError("Light screenshot: copia in clipboard fallita: " + e.getMessage());
+        }
+    }
+
+    private static void setAwtClipboardContents(BufferedImage buffered, Logging logging) {
+        Runnable task = () -> {
+            try {
+                Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+                Transferable t = new MultiFlavorImageTransferable(buffered);
+                lastTransferable = t;
+                ClipboardOwner owner = (cb, contents) -> { };
+                clipboard.setContents(t, owner);
+                logging.logToOutput("Light screenshot: system clipboard (AWT) aggiornata.");
+            } catch (Exception e) {
+                logging.logToError("Light screenshot: AWT clipboard: " + e.getMessage());
+            }
+        };
+        if (SwingUtilities.isEventDispatchThread()) {
+            task.run();
+            return;
+        }
+        try {
+            SwingUtilities.invokeAndWait(task);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logging.logToError("Light screenshot: AWT clipboard interrotta.");
+        } catch (InvocationTargetException e) {
+            Throwable c = e.getCause();
+            logging.logToError("Light screenshot: AWT clipboard: " + (c != null ? c.getMessage() : e.getMessage()));
         }
     }
 

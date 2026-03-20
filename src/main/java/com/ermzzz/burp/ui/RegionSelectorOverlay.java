@@ -2,8 +2,11 @@ package com.ermzzz.burp.ui;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
@@ -26,12 +29,17 @@ public final class RegionSelectorOverlay {
             JRootPane root = jf.getRootPane();
             Component previousGlass = root.getGlassPane();
 
+            AtomicBoolean finished = new AtomicBoolean(false);
+
             JPanel glass = new JPanel(null) {
                 private Point start;
                 private final Rectangle selection = new Rectangle();
 
                 {
                     setOpaque(false);
+                    setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
+                    setFocusable(true);
+
                     MouseAdapter ma = new MouseAdapter() {
                         @Override
                         public void mousePressed(MouseEvent e) {
@@ -65,15 +73,20 @@ public final class RegionSelectorOverlay {
                                         selection.height
                                 );
                             }
-                            root.setGlassPane(previousGlass);
-                            previousGlass.setVisible(false);
-                            root.revalidate();
-                            root.repaint();
-                            callback.accept(screenRect);
+                            finish(root, previousGlass, callback, screenRect, finished);
                         }
                     };
                     addMouseListener(ma);
                     addMouseMotionListener(ma);
+
+                    addKeyListener(new KeyAdapter() {
+                        @Override
+                        public void keyPressed(KeyEvent e) {
+                            if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                                finish(root, previousGlass, callback, null, finished);
+                            }
+                        }
+                    });
                 }
 
                 @Override
@@ -97,6 +110,25 @@ public final class RegionSelectorOverlay {
             glass.setVisible(true);
             glass.requestFocusInWindow();
             root.revalidate();
+            root.repaint();
         });
+    }
+
+    /**
+     * Ripristina il glass pane originale e invoca il callback. Deve girare sull’EDT.
+     */
+    private static void finish(JRootPane root, Component previousGlass, Consumer<Rectangle> callback,
+                               Rectangle screenRect, AtomicBoolean finished) {
+        if (!finished.compareAndSet(false, true)) {
+            return;
+        }
+        try {
+            root.setGlassPane(previousGlass);
+            previousGlass.setVisible(false);
+            root.revalidate();
+            root.repaint();
+        } finally {
+            callback.accept(screenRect);
+        }
     }
 }
