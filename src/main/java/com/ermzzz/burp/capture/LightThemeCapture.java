@@ -4,6 +4,9 @@ import burp.api.montoya.logging.Logging;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class LightThemeCapture {
 
@@ -17,22 +20,19 @@ public class LightThemeCapture {
         try {
             // switch a un L&F chiaro (Nimbus se disponibile, altrimenti Metal)
             String lightLaf = findLightLookAndFeelClassName(logging);
-            if (lightLaf != null && !lightLaf.equals(originalLaf)) {
-                UIManager.setLookAndFeel(lightLaf);
-                SwingUtilities.updateComponentTreeUI(burpFrame);
-            }
 
-            // Assicura che la UI sia ridipinta
-            burpFrame.invalidate();
-            burpFrame.validate();
-            burpFrame.repaint();
-
-            // piccola sincronizzazione EDT
-            try {
-                EventQueue.invokeAndWait(() -> {
-                });
-            } catch (Exception ignored) {
-            }
+            List<Frame> burpFrames = findVisibleBurpFrames();
+            runOnEdtAndWait(() -> {
+                if (lightLaf != null && !lightLaf.equals(originalLaf)) {
+                    UIManager.setLookAndFeel(lightLaf);
+                }
+                for (Frame f : burpFrames) {
+                    SwingUtilities.updateComponentTreeUI(f);
+                    f.invalidate();
+                    f.validate();
+                    f.repaint();
+                }
+            });
 
             Robot robot = new Robot();
             Image image = robot.createScreenCapture(region);
@@ -42,19 +42,62 @@ public class LightThemeCapture {
         } catch (Exception e) {
             logging.logToError("Light screenshot capture failed: " + e.getMessage());
         } finally {
-            // ripristina L&F originale
+            // ripristina L&F originale su tutti i frame Burp visibili
             try {
-                if (originalLaf != null && !originalLaf.equals(UIManager.getLookAndFeel().getClass().getName())) {
-                    UIManager.setLookAndFeel(originalLaf);
-                    SwingUtilities.updateComponentTreeUI(burpFrame);
-                    burpFrame.invalidate();
-                    burpFrame.validate();
-                    burpFrame.repaint();
-                }
+                List<Frame> burpFrames = findVisibleBurpFrames();
+                runOnEdtAndWait(() -> {
+                    if (originalLaf != null && !originalLaf.equals(UIManager.getLookAndFeel().getClass().getName())) {
+                        UIManager.setLookAndFeel(originalLaf);
+                    }
+                    for (Frame f : burpFrames) {
+                        SwingUtilities.updateComponentTreeUI(f);
+                        f.invalidate();
+                        f.validate();
+                        f.repaint();
+                    }
+                });
             } catch (Exception e) {
                 logging.logToError("Failed to restore original LookAndFeel: " + e.getMessage());
             }
         }
+    }
+
+    private static void runOnEdtAndWait(Runnable r) throws Exception {
+        if (SwingUtilities.isEventDispatchThread()) {
+            r.run();
+            return;
+        }
+        EventQueue.invokeAndWait(r);
+    }
+
+    private static List<Frame> findVisibleBurpFrames() {
+        Frame[] frames = Frame.getFrames();
+        if (frames == null) {
+            return Arrays.asList();
+        }
+        List<Frame> out = new ArrayList<>();
+        for (Frame f : frames) {
+            try {
+                if (f == null) continue;
+                if (!f.isVisible()) continue;
+                if (f.getTitle() == null) continue;
+                String title = f.getTitle().toLowerCase();
+                if (title.contains("burp")) {
+                    out.add(f);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        if (out.isEmpty()) {
+            // fallback al frame passato (anche se non matcha titolo)
+            Frame[] frames2 = Frame.getFrames();
+            for (Frame f : frames2) {
+                if (f != null && f.isVisible()) {
+                    out.add(f);
+                }
+            }
+        }
+        return out;
     }
 
     private static String findLightLookAndFeelClassName(Logging logging) {

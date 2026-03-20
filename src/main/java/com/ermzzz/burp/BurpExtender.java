@@ -52,7 +52,12 @@ public class BurpExtender implements BurpExtension {
                     return;
                 }
                 api.logging().logToOutput("Light screenshot: regione selezionata " + rectangle);
-                LightThemeCapture.captureRegionToClipboard(burpFrame, rectangle, api.logging());
+                // Non blocchiamo l'EDT: l'overlay deve sparire subito, mentre lo screenshot/cambio tema può richiedere tempo.
+                Thread t = new Thread(() ->
+                        LightThemeCapture.captureRegionToClipboard(burpFrame, rectangle, api.logging()),
+                        "light-theme-capture");
+                t.setDaemon(true);
+                t.start();
             });
         });
     }
