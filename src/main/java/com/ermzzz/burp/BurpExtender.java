@@ -6,6 +6,7 @@ import burp.api.montoya.ui.menu.Menu;
 import burp.api.montoya.ui.menu.MenuItem;
 import burp.api.montoya.ui.menu.BasicMenuItem;
 
+import com.ermzzz.burp.config.SelectionAppearance;
 import com.ermzzz.burp.ui.RegionSelectorOverlay;
 import com.ermzzz.burp.capture.LightThemeCapture;
 
@@ -25,6 +26,10 @@ public class BurpExtender implements BurpExtension {
         api.extension().setName("Light Screenshot Helper");
 
         api.logging().logToOutput("Light Screenshot Helper loaded");
+        if (System.getProperty(SelectionAppearance.PROPERTY_SELECTION_COLOR) != null) {
+            api.logging().logToOutput("Light Screenshot: bordo selezione = "
+                    + SelectionAppearance.selectionBorderColor() + " (-D" + SelectionAppearance.PROPERTY_SELECTION_COLOR + ")");
+        }
 
         BasicMenuItem item = BasicMenuItem.basicMenuItem("Select region -> Clipboard (report / chiaro)")
                 .withAction(this::handleLightScreenshot);

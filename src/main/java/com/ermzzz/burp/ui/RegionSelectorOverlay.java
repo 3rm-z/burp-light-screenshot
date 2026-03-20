@@ -1,5 +1,7 @@
 package com.ermzzz.burp.ui;
 
+import com.ermzzz.burp.config.SelectionAppearance;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
@@ -96,7 +98,7 @@ public final class RegionSelectorOverlay {
                         Graphics2D g2 = (Graphics2D) g.create();
                         try {
                             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                            g2.setColor(new Color(255, 0, 0, 200));
+                            g2.setColor(SelectionAppearance.selectionBorderColor());
                             g2.setStroke(new BasicStroke(2f));
                             g2.drawRect(selection.x, selection.y, selection.width - 1, selection.height - 1);
                         } finally {

@@ -15,13 +15,16 @@ Ordine approssimativo; spunta o riordina quando serve.
 
 ## UX
 
+- [x] **Colore bordo selezione** personalizzabile via `-Dburp.lightss.selection.color=...` (vedi README)
+- [ ] UI in-estensione (tab) per colore bordo senza modificare lo script di avvio Burp
 - [ ] Feedback **modalità screenshot** (cursore crosshair già possibile sul glass pane; messaggio status bar / dialog leggero “Seleziona regione…”)
 - [ ] **Conferma visiva** a fine capture (toast / riga Output già presente — eventualmente dialog non modale “Copiato + path file”)
 - [x] **Esc** per uscire dalla selezione senza rettangolo
 
 ## Documentazione
 
-- [ ] README: prerequisiti Kali (`xclip`, Wayland → `wl-copy`), nota VM clipboard immagini
+- [x] README: build, bordo, Linux, **come quantificare** output filtro
+- [ ] Nota VM: clipboard immagini host/guest
 
 ---
 

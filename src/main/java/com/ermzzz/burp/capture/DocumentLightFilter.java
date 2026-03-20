@@ -23,10 +23,13 @@ public final class DocumentLightFilter {
      * Curva sulla luminanza in ingresso: valori più alti schiariscono i mid-tone (meno “sotto ombra”).
      */
     private static final float GAMMA = 0.72f;
-    /** Moltiplicatore saturazione in uscita (1 = invariato). */
-    private static final float SATURATION_BOOST = 1.24f;
-    /** Leggero lift sulla luminosità HSB (value). */
-    private static final float VALUE_BOOST = 1.07f;
+    /**
+     * Saturazione extra sui pixel già colorati (header, accenti); i grigi restano più “puliti”
+     * così l’azzurro non si confonde col testo grigio.
+     */
+    private static final float SATURATION_BOOST = 1.38f;
+    /** Lift value massimo su pixel poco saturi (carta / testo neutro). */
+    private static final float VALUE_BOOST = 1.08f;
     /** Evita scale esplosive sul rumore/cerniere nere. */
     private static final float LUM_FLOOR = 0.018f;
     /** Limite scala RGB per pixel rumorosissimi. */
@@ -78,8 +81,14 @@ public final class DocumentLightFilter {
                 int bi = Math.round(b2 * 255f);
 
                 float[] hsb = Color.RGBtoHSB(ri, gi, bi, null);
-                hsb[1] = clamp01(hsb[1] * SATURATION_BOOST);
-                hsb[2] = clamp01(hsb[2] * VALUE_BOOST);
+                float s = hsb[1];
+                // 0 = grigio, 1 = colore pieno: più boost dove c’è già croma (header, link, ecc.)
+                float accent = smoothstep(0.09f, 0.42f, s);
+                float satMul = 1f + (SATURATION_BOOST - 1f) * (0.25f + 0.75f * accent);
+                hsb[1] = clamp01(s * satMul);
+                // Meno “lavaggio” sul value per i colorati → hue più distinguibili
+                float valMul = 1f + (VALUE_BOOST - 1f) * (1f - 0.72f * accent);
+                hsb[2] = clamp01(hsb[2] * valMul);
                 int rgb = Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]) & 0xFFFFFF;
                 out.setRGB(x, y, rgb);
             }
@@ -95,5 +104,14 @@ public final class DocumentLightFilter {
             return 1f;
         }
         return v;
+    }
+
+    /** Hermite smooth 0→1 tra edge0 e edge1. */
+    private static float smoothstep(float edge0, float edge1, float x) {
+        if (edge1 <= edge0) {
+            return x >= edge1 ? 1f : 0f;
+        }
+        float t = clamp01((x - edge0) / (edge1 - edge0));
+        return t * t * (3f - 2f * t);
     }
 }
