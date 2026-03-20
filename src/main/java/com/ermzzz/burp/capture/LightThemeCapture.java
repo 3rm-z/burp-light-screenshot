@@ -15,7 +15,7 @@ public class LightThemeCapture {
             return;
         }
 
-        String originalLaf = UIManager.getLookAndFeel().getClass().getName();
+        LookAndFeel originalLookAndFeel = UIManager.getLookAndFeel();
 
         try {
             // switch a un L&F chiaro (Nimbus se disponibile, altrimenti Metal)
@@ -23,7 +23,7 @@ public class LightThemeCapture {
 
             List<Frame> burpFrames = findVisibleBurpFrames();
             runOnEdtAndWait(() -> {
-                if (lightLaf != null && !lightLaf.equals(originalLaf)) {
+                if (lightLaf != null && (originalLookAndFeel == null || !lightLaf.equals(originalLookAndFeel.getClass().getName()))) {
                     try {
                         UIManager.setLookAndFeel(lightLaf);
                     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException ex) {
@@ -50,9 +50,9 @@ public class LightThemeCapture {
             try {
                 List<Frame> burpFrames = findVisibleBurpFrames();
                 runOnEdtAndWait(() -> {
-                    if (originalLaf != null && !originalLaf.equals(UIManager.getLookAndFeel().getClass().getName())) {
+                    if (originalLookAndFeel != null && UIManager.getLookAndFeel() != originalLookAndFeel) {
                         try {
-                            UIManager.setLookAndFeel(originalLaf);
+                            UIManager.setLookAndFeel(originalLookAndFeel);
                         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException ex) {
                             logging.logToError("Light screenshot: restore LookAndFeel failed: " + ex.getMessage());
                         }

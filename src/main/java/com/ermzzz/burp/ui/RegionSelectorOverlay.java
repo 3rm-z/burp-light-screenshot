@@ -17,6 +17,7 @@ public class RegionSelectorOverlay extends JWindow {
         this.callback = callback;
         setAlwaysOnTop(true);
         setBackground(new Color(0, 0, 0, 0));
+        setOpaque(false);
         setFocusableWindowState(false);
         setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
 
@@ -70,17 +71,19 @@ public class RegionSelectorOverlay extends JWindow {
 
     @Override
     public void paint(Graphics g) {
-        super.paint(g);
         if (selection != null && selection.width > 0 && selection.height > 0) {
             Graphics2D g2 = (Graphics2D) g.create();
-            g2.setColor(new Color(255, 0, 0, 55)); // fill semi-trasparente solo nel rettangolo
-            g2.fillRect(selection.x, selection.y, selection.width, selection.height);
+            try {
+                g2.setColor(new Color(255, 0, 0, 55)); // fill semi-trasparente solo nel rettangolo
+                g2.fillRect(selection.x, selection.y, selection.width, selection.height);
 
-            g2.setColor(new Color(255, 0, 0, 220));
-            g2.setStroke(new BasicStroke(2f));
-            g2.drawRect(selection.x, selection.y, selection.width, selection.height);
+                g2.setColor(new Color(255, 0, 0, 220));
+                g2.setStroke(new BasicStroke(2f));
+                g2.drawRect(selection.x, selection.y, selection.width, selection.height);
+            } finally {
+                g2.dispose();
+            }
 
-            g2.dispose();
         }
     }
 
