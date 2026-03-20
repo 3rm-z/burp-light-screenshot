@@ -53,7 +53,7 @@ public class LightThemeCapture {
                     if (originalLookAndFeel != null && UIManager.getLookAndFeel() != originalLookAndFeel) {
                         try {
                             UIManager.setLookAndFeel(originalLookAndFeel);
-                        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException ex) {
+                        } catch (Exception ex) {
                             logging.logToError("Light screenshot: restore LookAndFeel failed: " + ex.getMessage());
                         }
                     }
