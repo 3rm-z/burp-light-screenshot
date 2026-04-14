@@ -10,13 +10,13 @@ public final class FlatLafApproxFilter {
 
     /** Arancio pulsante / GET più acceso (#FF780A). */
     private static final int ORANGE_R = 255;
-    private static final int ORANGE_G = 91;
+    private static final int ORANGE_G = 102;
     private static final int ORANGE_B = 0;
 
     /** Burp AI — indigo più chiaro (#5C6BC0). */
-    private static final int AI_R = 92;
-    private static final int AI_G = 107;
-    private static final int AI_B = 192;
+    private static final int AI_R = 110;
+    private static final int AI_G = 125;
+    private static final int AI_B = 210;
 
     /** Verde status più vivo (#43A047). */
     private static final int GREEN_R = 67;
@@ -74,7 +74,7 @@ public final class FlatLafApproxFilter {
                     tg = 36;
                     tb = 170;
                 } else if (H >= 0.50f && H <= 0.70f && S > 0.10f && Br > 0.18f) {
-                    a = smoothstep(0.10f, 0.38f, S) * 0.32f;
+                    a = smoothstep(0.10f, 0.38f, S) * 0.18f;
                     tr = 25;
                     tg = 118;
                     tb = 210;
@@ -91,7 +91,7 @@ public final class FlatLafApproxFilter {
                     tb = GREEN_B;
                 } else if (H >= 0.02f && H <= 0.14f && (S > 0.12f || (Br < 0.52f && S > 0.05f && Br > 0.12f))) {
                     // GET / Send / arancio anche se scuri o poco saturi
-                    a = smoothstep(0.12f, 0.45f, Math.max(S, Br * 0.35f)) * 0.72f;
+                    a = smoothstep(0.12f, 0.45f, Math.max(S, Br * 0.35f)) * 0.88f;
                     tr = ORANGE_R;
                     tg = ORANGE_G;
                     tb = ORANGE_B;
