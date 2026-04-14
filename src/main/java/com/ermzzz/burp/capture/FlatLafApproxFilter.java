@@ -5,9 +5,23 @@ import java.awt.image.BufferedImage;
 
 /**
  * Avvicina i colori a un light theme tipo FlatLaf / Burp (senza cambiare il L&amp;F in runtime).
- * Euristica su HSB: carta bianca, toolbar grigio, arancio metodo HTTP, teal header, verdi status, XML ecc.
  */
 public final class FlatLafApproxFilter {
+
+    /** Arancio pulsante / GET più acceso (#FF780A). */
+    private static final int ORANGE_R = 255;
+    private static final int ORANGE_G = 91;
+    private static final int ORANGE_B = 0;
+
+    /** Burp AI — indigo più chiaro (#5C6BC0). */
+    private static final int AI_R = 92;
+    private static final int AI_G = 107;
+    private static final int AI_B = 192;
+
+    /** Verde status più vivo (#43A047). */
+    private static final int GREEN_R = 67;
+    private static final int GREEN_G = 160;
+    private static final int GREEN_B = 71;
 
     private FlatLafApproxFilter() {
     }
@@ -35,71 +49,62 @@ public final class FlatLafApproxFilter {
                 int tb = 255;
 
                 if (S < 0.11f && Br > 0.84f) {
-                    // Editor / carta → #FFFFFF
                     a = smoothstep(0.84f, 0.97f, Br) * (1f - S / 0.11f) * 0.72f;
                     tr = 255;
                     tg = 255;
                     tb = 255;
                 } else if (S < 0.14f && Br > 0.68f && Br < 0.86f) {
-                    // Barra tab / toolbar → ~#E8E8E8
                     a = (1f - S / 0.14f) * 0.42f;
                     tr = 232;
                     tg = 232;
                     tb = 232;
                 } else if (S < 0.12f && Br > 0.78f && Br <= 0.92f) {
-                    // Gutter numeri riga → ~#F5F5F5
                     a = (1f - S / 0.12f) * 0.35f;
                     tr = 245;
                     tg = 245;
                     tb = 245;
-                } else if (isRedHue(H) && S > 0.16f && Br > 0.22f) {
-                    // Tag XML / coral → #E53935
-                    a = smoothstep(0.16f, 0.42f, S) * 0.52f;
+                } else if (isRedHue(H) && S > 0.09f && Br > 0.18f) {
+                    a = smoothstep(0.09f, 0.38f, S) * 0.58f;
                     tr = 229;
                     tg = 57;
                     tb = 53;
-                } else if (H >= 0.70f && H <= 0.86f && S > 0.14f) {
-                    // Attributi viola → #8E24AA
-                    a = smoothstep(0.14f, 0.38f, S) * 0.48f;
+                } else if (H >= 0.70f && H <= 0.86f && S > 0.11f) {
+                    a = smoothstep(0.11f, 0.36f, S) * 0.52f;
                     tr = 142;
                     tg = 36;
                     tb = 170;
-                } else if (H >= 0.52f && H <= 0.68f && S > 0.14f && Br > 0.22f) {
-                    // Stringhe / valori blu → #1976D2
-                    a = smoothstep(0.14f, 0.42f, S) * 0.48f;
+                } else if (H >= 0.50f && H <= 0.70f && S > 0.10f && Br > 0.18f) {
+                    a = smoothstep(0.10f, 0.38f, S) * 0.32f;
                     tr = 25;
                     tg = 118;
                     tb = 210;
-                } else if (H >= 0.38f && H <= 0.54f && S > 0.11f) {
-                    // Nomi header teal → #006B6B
-                    a = smoothstep(0.11f, 0.36f, S) * 0.55f;
+                } else if (H >= 0.33f && H <= 0.56f && S > 0.06f) {
+                    // Header teal anche se poco saturi (dopo filtro finiscono grigi)
+                    a = smoothstep(0.06f, 0.32f, S) * 0.62f;
                     tr = 0;
                     tg = 107;
                     tb = 107;
-                } else if (H >= 0.20f && H <= 0.40f && S > 0.14f) {
-                    // 200 OK verde → #2E7D32
-                    a = smoothstep(0.14f, 0.38f, S) * 0.48f;
-                    tr = 46;
-                    tg = 125;
-                    tb = 50;
-                } else if (H >= 0.02f && H <= 0.12f && S > 0.22f && Br > 0.32f) {
-                    // GET / Send arancio → #FF6D00
-                    a = smoothstep(0.22f, 0.52f, S) * 0.58f;
-                    tr = 255;
-                    tg = 109;
-                    tb = 0;
-                } else if (H >= 0.58f && H <= 0.75f && S > 0.12f && Br < 0.35f) {
-                    // Testo navy / URL scuri → #1A1A2E
-                    a = smoothstep(0.12f, 0.30f, S) * 0.35f;
+                } else if (H >= 0.18f && H <= 0.44f && S > 0.10f) {
+                    a = smoothstep(0.10f, 0.36f, S) * 0.58f;
+                    tr = GREEN_R;
+                    tg = GREEN_G;
+                    tb = GREEN_B;
+                } else if (H >= 0.02f && H <= 0.14f && (S > 0.12f || (Br < 0.52f && S > 0.05f && Br > 0.12f))) {
+                    // GET / Send / arancio anche se scuri o poco saturi
+                    a = smoothstep(0.12f, 0.45f, Math.max(S, Br * 0.35f)) * 0.72f;
+                    tr = ORANGE_R;
+                    tg = ORANGE_G;
+                    tb = ORANGE_B;
+                } else if (H >= 0.58f && H <= 0.75f && S > 0.10f && Br < 0.38f) {
+                    a = smoothstep(0.10f, 0.28f, S) * 0.38f;
                     tr = 26;
                     tg = 26;
                     tb = 46;
-                } else if (H >= 0.62f && H <= 0.78f && S > 0.18f && Br > 0.18f && Br < 0.55f) {
-                    // Burp AI / navy button → #283593
-                    a = smoothstep(0.18f, 0.40f, S) * 0.45f;
-                    tr = 40;
-                    tg = 53;
-                    tb = 147;
+                } else if (H >= 0.58f && H <= 0.80f && S > 0.14f && Br > 0.15f && Br < 0.62f) {
+                    a = smoothstep(0.14f, 0.38f, S) * 0.58f;
+                    tr = AI_R;
+                    tg = AI_G;
+                    tb = AI_B;
                 }
 
                 if (a > 0.02f) {

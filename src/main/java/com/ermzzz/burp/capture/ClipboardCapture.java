@@ -187,33 +187,44 @@ public class ClipboardCapture {
      */
     private static boolean tryLinuxClipboardFromFile(Path pngFile, Logging logging) {
         logLinuxClipboardEnv(logging);
+        final byte[] pngData;
+        try {
+            pngData = Files.readAllBytes(pngFile);
+        } catch (IOException e) {
+            logging.logToOutput("Light screenshot: lettura PNG per clipboard fallita: " + e.getMessage());
+            return false;
+        }
+        if (pngData.length == 0) {
+            return false;
+        }
+
         String display = System.getenv("DISPLAY");
         String wayland = System.getenv("WAYLAND_DISPLAY");
 
         boolean ok = false;
         if (display != null && !display.isEmpty()) {
-            ok = tryXclipFromFile(pngFile, logging);
+            ok = tryXclipFromPngBytes(pngData, logging);
         }
         if (!ok && wayland != null && !wayland.isEmpty()) {
-            ok = tryWlCopyFromFile(pngFile, logging);
+            ok = tryWlCopyFromPngBytes(pngData, logging);
         }
         if (!ok) {
-            ok = tryXclipFromFile(pngFile, logging);
+            ok = tryXclipFromPngBytes(pngData, logging);
         }
         return ok;
     }
 
-    private static boolean tryWlCopyFromFile(Path pngFile, Logging logging) {
+    private static boolean tryWlCopyFromPngBytes(byte[] pngData, Logging logging) {
         String[] bins = {"wl-copy", "/usr/bin/wl-copy", "/bin/wl-copy"};
         for (String bin : bins) {
             try {
                 ProcessBuilder pb = new ProcessBuilder(bin, "--type", "image/png");
-                pb.redirectInput(pngFile.toFile());
                 applyLinuxX11Env(pb);
                 pb.redirectErrorStream(true);
                 Process p = pb.start();
-                String out = readStream(p.getInputStream());
+                writeAllAndClose(p.getOutputStream(), pngData);
                 int code = p.waitFor();
+                String out = readStream(p.getInputStream());
                 if (code == 0) {
                     logging.logToOutput("Light screenshot: clipboard immagine via wl-copy (Wayland).");
                     return true;
@@ -233,14 +244,14 @@ public class ClipboardCapture {
     }
 
     /**
-     * {@code xclip -i} legge da stdin; alcune build si aspettano {@code -i} esplicito.
-     * Copia anche su {@code primary} (incolla col tasto centrale su X11).
+     * Legge PNG in memoria una sola volta; ogni xclip riceve i byte su stdin (evita bug
+     * {@code redirectInput(File)} su seconda invocazione / primary).
      */
-    private static boolean tryXclipFromFile(Path pngFile, Logging logging) {
+    private static boolean tryXclipFromPngBytes(byte[] pngData, Logging logging) {
         String[] bins = {"/usr/bin/xclip", "/bin/xclip", "xclip"};
         boolean clipboardOk = false;
         for (String bin : bins) {
-            if (runXclip(bin, pngFile, "clipboard", logging)) {
+            if (runXclip(bin, pngData, "clipboard", logging)) {
                 logging.logToOutput("Light screenshot: clipboard immagine via xclip (selection=clipboard) [" + bin + "].");
                 clipboardOk = true;
                 break;
@@ -248,7 +259,7 @@ public class ClipboardCapture {
         }
         if (clipboardOk) {
             for (String bin : bins) {
-                if (runXclip(bin, pngFile, "primary", logging)) {
+                if (runXclip(bin, pngData, "primary", logging)) {
                     logging.logToOutput("Light screenshot: xclip anche selection=primary (middle-click) [" + bin + "].");
                     break;
                 }
@@ -257,34 +268,34 @@ public class ClipboardCapture {
         return clipboardOk;
     }
 
-    /**
-     * Alcune build di xclip falliscono con {@code -i} o con ordine argomenti; proviamo più varianti + pipe shell.
-     */
-    private static boolean runXclip(String bin, Path pngFile, String selection, Logging logging) {
-        if (runXclipVariant(bin, pngFile, selection, logging, false)) {
-            return true;
+    private static void writeAllAndClose(OutputStream os, byte[] data) throws IOException {
+        try (OutputStream out = os) {
+            out.write(data);
+            out.flush();
         }
-        if (runXclipVariant(bin, pngFile, selection, logging, true)) {
-            return true;
-        }
-        if (runXclipVariantOrder2(bin, pngFile, selection, logging)) {
-            return true;
-        }
-        return runXclipShellCatPipe(bin, pngFile, selection, logging);
     }
 
-    /** {@code xclip [-i] -selection S -t image/png} + stdin da file. */
-    private static boolean runXclipVariant(String bin, Path pngFile, String selection, Logging logging, boolean dashI) {
+    private static boolean runXclip(String bin, byte[] pngData, String selection, Logging logging) {
+        if (runXclipVariant(bin, pngData, selection, logging, false)) {
+            return true;
+        }
+        if (runXclipVariant(bin, pngData, selection, logging, true)) {
+            return true;
+        }
+        return runXclipVariantOrder2(bin, pngData, selection, logging);
+    }
+
+    private static boolean runXclipVariant(String bin, byte[] pngData, String selection, Logging logging, boolean dashI) {
         try {
             ProcessBuilder pb = dashI
                     ? new ProcessBuilder(bin, "-i", "-selection", selection, "-t", "image/png")
                     : new ProcessBuilder(bin, "-selection", selection, "-t", "image/png");
-            pb.redirectInput(pngFile.toFile());
             applyLinuxX11Env(pb);
             pb.redirectErrorStream(true);
             Process p = pb.start();
-            String out = readStream(p.getInputStream());
+            writeAllAndClose(p.getOutputStream(), pngData);
             int code = p.waitFor();
+            String out = readStream(p.getInputStream());
             if (code == 0) {
                 return true;
             }
@@ -298,16 +309,15 @@ public class ClipboardCapture {
         return false;
     }
 
-    /** {@code xclip -t image/png -selection S} */
-    private static boolean runXclipVariantOrder2(String bin, Path pngFile, String selection, Logging logging) {
+    private static boolean runXclipVariantOrder2(String bin, byte[] pngData, String selection, Logging logging) {
         try {
             ProcessBuilder pb = new ProcessBuilder(bin, "-t", "image/png", "-selection", selection);
-            pb.redirectInput(pngFile.toFile());
             applyLinuxX11Env(pb);
             pb.redirectErrorStream(true);
             Process p = pb.start();
-            String out = readStream(p.getInputStream());
+            writeAllAndClose(p.getOutputStream(), pngData);
             int code = p.waitFor();
+            String out = readStream(p.getInputStream());
             if (code == 0) {
                 return true;
             }
@@ -319,36 +329,6 @@ public class ClipboardCapture {
             logging.logToError("Light screenshot: xclip interrotto.");
         }
         return false;
-    }
-
-    /** {@code cat file | xclip ...} (stesso ambiente di una shell login). */
-    private static boolean runXclipShellCatPipe(String bin, Path pngFile, String selection, Logging logging) {
-        try {
-            String pathEsc = shellSingleQuoted(pngFile.toAbsolutePath().toString());
-            String binEsc = shellSingleQuoted(bin);
-            String sh = String.format("cat %s | %s -selection %s -t image/png", pathEsc, binEsc, selection);
-            ProcessBuilder pb = new ProcessBuilder("/bin/sh", "-c", sh);
-            applyLinuxX11Env(pb);
-            pb.redirectErrorStream(true);
-            Process p = pb.start();
-            String out = readStream(p.getInputStream());
-            int code = p.waitFor();
-            if (code == 0) {
-                logging.logToOutput("Light screenshot: xclip via sh pipe OK [" + bin + "] selection=" + selection);
-                return true;
-            }
-            logXclipFail(bin, selection, code, out, logging, "sh pipe");
-        } catch (IOException e) {
-            logging.logToOutput("Light screenshot: xclip sh pipe: " + e.getMessage());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            logging.logToError("Light screenshot: xclip interrotto.");
-        }
-        return false;
-    }
-
-    private static String shellSingleQuoted(String s) {
-        return "'" + s.replace("'", "'\"'\"'") + "'";
     }
 
     private static void logXclipFail(String bin, String selection, int code, String out, Logging logging, String variant) {

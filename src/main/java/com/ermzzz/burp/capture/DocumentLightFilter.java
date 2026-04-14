@@ -12,8 +12,8 @@ import java.awt.image.BufferedImage;
  */
 public final class DocumentLightFilter {
 
-    private static final float INK_L = 0.04f;
-    private static final float PAPER_L = 0.997f;
+    private static final float INK_L = 0.08f;
+    private static final float PAPER_L = 0.96f;
     private static final float GAMMA = 0.78f;
     private static final float SATURATION_BOOST = 1.52f;
     private static final float VALUE_BOOST = 1.06f;
@@ -97,8 +97,8 @@ public final class DocumentLightFilter {
         }
 
         applyLuminanceHistogramStretch(out);
-        // Avvicina a palette tipo FlatLaf light (target da confronto tema Burp reale)
         FlatLafApproxFilter.apply(out);
+        LightOutputSharpen.apply(out);
         return out;
     }
 
