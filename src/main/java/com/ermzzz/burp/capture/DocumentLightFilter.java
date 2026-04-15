@@ -94,6 +94,20 @@ public final class DocumentLightFilter {
                 int rgb = (ri << 16) | (gi << 8) | bi;
                 out.setRGB(x, y, rgb);
             }
+        }// Recupera nomi header: azzurro chiaro dark (#D1E8F9) → blu documento
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                int argb = src.getRGB(x, y);
+                int r = (argb >> 16) & 0xFF;
+                int g = (argb >> 8) & 0xFF;
+                int b = argb & 0xFF;
+                float[] hsb = Color.RGBtoHSB(r, g, b, null);
+                if (hsb[0] >= 0.54f && hsb[0] <= 0.64f 
+                        && hsb[1] >= 0.08f && hsb[1] <= 0.30f 
+                        && hsb[2] > 0.80f) {
+                    out.setRGB(x, y, 0x0055AA);
+                }
+            }
         }
 
         applyLuminanceHistogramStretch(out);
