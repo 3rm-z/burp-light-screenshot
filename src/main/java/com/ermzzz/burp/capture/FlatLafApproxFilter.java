@@ -53,6 +53,12 @@ public final class FlatLafApproxFilter {
                     tr = 255;
                     tg = 255;
                     tb = 255;
+                } else if (H >= 0.54f && H <= 0.64f && S >= 0.08f && S <= 0.28f && Br > 0.80f) {
+                    // Nomi header HTTP in dark — azzurro chiarissimo #D1E8F9 → blu documento
+                    a = smoothstep(0.08f, 0.28f, S) * 0.82f;
+                    tr = 0;
+                    tg = 85;
+                    tb = 170;
                 } else if (S < 0.14f && Br > 0.68f && Br < 0.86f) {
                     a = (1f - S / 0.14f) * 0.42f;
                     tr = 232;
