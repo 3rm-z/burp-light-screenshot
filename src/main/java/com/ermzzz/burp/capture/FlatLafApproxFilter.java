@@ -14,9 +14,9 @@ public final class FlatLafApproxFilter {
     private static final int ORANGE_B = 0;
 
     /** Burp AI — indigo più chiaro (#5C6BC0). */
-    private static final int AI_R = 130;
-    private static final int AI_G = 145;
-    private static final int AI_B = 230;
+    private static final int AI_R = 150;
+    private static final int AI_G = 160;
+    private static final int AI_B = 240;
 
     /** Verde status più vivo (#43A047). */
     private static final int GREEN_R = 67;
@@ -80,7 +80,7 @@ public final class FlatLafApproxFilter {
                     tb = 210;
                 } else if (H >= 0.28f && H <= 0.62f && S > 0.04f) {
                     // Header teal anche se poco saturi (dopo filtro finiscono grigi)
-                    a = smoothstep(0.04f, 0.28f, S) * 0.65f;
+                    a = smoothstep(0.04f, 0.28f, S) * 0.45f;
                     tr = 0;
                     tg = 107;
                     tb = 107;
@@ -89,11 +89,11 @@ public final class FlatLafApproxFilter {
                     tr = GREEN_R;
                     tg = GREEN_G;
                     tb = GREEN_B;
-                } else if (H >= 0.02f && H <= 0.14f && (S > 0.12f || (Br < 0.52f && S > 0.05f && Br > 0.12f))) {
-                    // GET / Send / arancio anche se scuri o poco saturi
-                    a = smoothstep(0.12f, 0.45f, Math.max(S, Br * 0.35f)) * 0.88f;
-                    tr = ORANGE_R;
-                    tg = ORANGE_G;
+                } else if (H >= 0.04f && H <= 0.12f && S > 0.04f) {
+                    // Cookie / valori arancioni
+                    a = smoothstep(0.04f, 0.2f, S) * 0.60f;
+                    tr = ORANGE_R; 
+                    tg = ORANGE_G; 
                     tb = ORANGE_B;
                 } else if (H >= 0.58f && H <= 0.75f && S > 0.10f && Br < 0.38f) {
                     a = smoothstep(0.10f, 0.28f, S) * 0.38f;
