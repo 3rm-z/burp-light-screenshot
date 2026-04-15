@@ -22,6 +22,10 @@ public final class FlatLafApproxFilter {
     private static final int GREEN_R = 67;
     private static final int GREEN_G = 160;
     private static final int GREEN_B = 71;
+    /** Blu header più vicino al light originale. */
+    private static final int HEADER_BLUE_R = 74;
+    private static final int HEADER_BLUE_G = 116;
+    private static final int HEADER_BLUE_B = 184;
 
     private FlatLafApproxFilter() {
     }
@@ -73,12 +77,18 @@ public final class FlatLafApproxFilter {
                     tr = 142;
                     tg = 36;
                     tb = 170;
+                } else if (H >= 0.52f && H <= 0.69f && S >= 0.03f && S <= 0.22f && Br > 0.50f) {
+                    // Header "bluino" spesso poco saturi dopo la conversione
+                    a = smoothstep(0.03f, 0.16f, S) * 0.70f;
+                    tr = HEADER_BLUE_R;
+                    tg = HEADER_BLUE_G;
+                    tb = HEADER_BLUE_B;
                 } else if (H >= 0.50f && H <= 0.70f && S > 0.10f && Br > 0.18f) {
-                    a = smoothstep(0.10f, 0.38f, S) * 0.18f;
+                    a = smoothstep(0.10f, 0.38f, S) * 0.32f;
                     tr = 25;
                     tg = 118;
                     tb = 210;
-                } else if (H >= 0.28f && H <= 0.62f && S > 0.04f) {
+                } else if (H >= 0.28f && H < 0.52f && S > 0.04f) {
                     // Header teal anche se poco saturi (dopo filtro finiscono grigi)
                     a = smoothstep(0.04f, 0.28f, S) * 0.45f;
                     tr = 0;
