@@ -1,6 +1,6 @@
 # Burp Light Screenshot Helper
 
-Estensione Burp (Montoya): screenshot di una regione della finestra, stile “report chiaro”, clipboard (+ PNG in `/tmp` su Linux).
+Estensione Burp (Montoya): screenshot di una regione della finestra, stile “report chiaro” oppure colori originali, clipboard (+ PNG in `/tmp` su Linux).
 
 ## Build
 
@@ -10,9 +10,20 @@ Estensione Burp (Montoya): screenshot di una regione della finestra, stile “re
 
 Carica il JAR generato in **Extensions**.
 
+## Menu in Burp
+
+Nel menu `Light Screenshot` trovi:
+
+- `Select region -> Clipboard (report / chiaro)` → applica il filtro colore
+- `Select region -> Clipboard (original colors)` → nessun filtro (1:1 rispetto allo schermo)
+- `Selection border color` → preset rapidi (neon) + reset
+
 ## Personalizzazione bordo selezione
 
-All’avvio della JVM di Burp (script di lancio, `.desktop`, ecc.) aggiungi una **system property**:
+Puoi cambiare il colore in due modi:
+
+1. **Da menu Burp**: `Light Screenshot -> Selection border color`
+2. **Da JVM property** (default all'avvio), ad esempio:
 
 ```text
 -Dburp.lightss.selection.color=#00E5FFCC
@@ -26,7 +37,8 @@ Formati:
 | `#RRGGBBAA` | `#FF6600D0` (alpha in hex) |
 | `r,g,b[,a]` | `0,200,255,200` |
 
-Proprietà: `burp.lightss.selection.color` (vedi `SelectionAppearance`).
+Proprietà: `burp.lightss.selection.color` (vedi `SelectionAppearance`).  
+Voce menu utile: `Reset to JVM property/default`.
 
 ## Come “quantificare” se l’immagine è troppo ombrata / spenta
 

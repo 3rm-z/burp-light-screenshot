@@ -1,6 +1,7 @@
 package com.ermzzz.burp.config;
 
 import java.awt.Color;
+import java.util.List;
 
 /**
  * Aspetto del rettangolo di selezione screenshot.
@@ -14,16 +15,42 @@ public final class SelectionAppearance {
     private SelectionAppearance() {
     }
 
-    /** Colore bordo overlay (default rosso semi-trasparente). */
+    private static final Color DEFAULT_COLOR = new Color(255, 0, 0, 200);
+    private static volatile Color currentColor = loadFromPropertyOrDefault();
+
+    public static final List<Preset> PRESETS = List.of(
+            new Preset("Neon Cyan", new Color(0, 229, 255, 220)),
+            new Preset("Neon Magenta", new Color(255, 0, 191, 220)),
+            new Preset("Neon Lime", new Color(57, 255, 20, 220)),
+            new Preset("Neon Orange", new Color(255, 122, 0, 220)),
+            new Preset("Neon Red", new Color(255, 45, 45, 220))
+    );
+
+    /** Colore bordo overlay attuale (runtime). */
     public static Color selectionBorderColor() {
+        return currentColor;
+    }
+
+    public static void setSelectionBorderColor(Color color) {
+        if (color != null) {
+            currentColor = color;
+        }
+    }
+
+    public static void resetToPropertyOrDefault() {
+        currentColor = loadFromPropertyOrDefault();
+    }
+
+    /** Colore bordo overlay da property JVM o default. */
+    private static Color loadFromPropertyOrDefault() {
         String raw = System.getProperty(PROPERTY_SELECTION_COLOR);
         if (raw == null || raw.isBlank()) {
-            return new Color(255, 0, 0, 200);
+            return DEFAULT_COLOR;
         }
         try {
             return parseColor(raw.trim());
         } catch (IllegalArgumentException e) {
-            return new Color(255, 0, 0, 200);
+            return DEFAULT_COLOR;
         }
     }
 
@@ -83,5 +110,23 @@ public final class SelectionAppearance {
 
     private static int clamp255(int v) {
         return Math.max(0, Math.min(255, v));
+    }
+
+    public static final class Preset {
+        private final String label;
+        private final Color color;
+
+        public Preset(String label, Color color) {
+            this.label = label;
+            this.color = color;
+        }
+
+        public String label() {
+            return label;
+        }
+
+        public Color color() {
+            return color;
+        }
     }
 }

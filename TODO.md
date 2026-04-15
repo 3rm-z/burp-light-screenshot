@@ -13,11 +13,12 @@ Ordine approssimativo; spunta o riordina quando serve.
 ## Qualità immagine
 
 - [ ] Affinare ancora filtro report se serve (dopo tuning gamma/saturazione/value)
-- [ ] Opzione menu **screenshot senza filtro** (tema scuro originale 1:1) per confronto / report dove va bene il dark
+- [x] Opzione menu **screenshot senza filtro** (tema scuro originale 1:1) per confronto / report dove va bene il dark
 
 ## UX
 
 - [x] **Colore bordo selezione** personalizzabile via `-Dburp.lightss.selection.color=...` (vedi README)
+- [x] **Preset colore bordo** da menu Burp (`Selection border color`) + reset a property/default
 - [ ] UI in-estensione (tab) per colore bordo senza modificare lo script di avvio Burp
 - [ ] Feedback **modalità screenshot** (cursore crosshair già possibile sul glass pane; messaggio status bar / dialog leggero “Seleziona regione…”)
 - [ ] **Conferma visiva** a fine capture (toast / riga Output già presente — eventualmente dialog non modale “Copiato + path file”)

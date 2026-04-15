@@ -12,7 +12,9 @@ import com.ermzzz.burp.capture.LightThemeCapture;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 public class BurpExtender implements BurpExtension {
@@ -31,16 +33,35 @@ public class BurpExtender implements BurpExtension {
                     + SelectionAppearance.selectionBorderColor() + " (-D" + SelectionAppearance.PROPERTY_SELECTION_COLOR + ")");
         }
 
-        BasicMenuItem item = BasicMenuItem.basicMenuItem("Select region -> Clipboard (report / chiaro)")
-                .withAction(this::handleLightScreenshot);
-
+        BasicMenuItem filtered = BasicMenuItem
+                .basicMenuItem("Select region -> Clipboard (report / chiaro)")
+                .withAction(() -> handleLightScreenshot(true));
+        BasicMenuItem original = BasicMenuItem
+                .basicMenuItem("Select region -> Clipboard (original colors)")
+                .withAction(() -> handleLightScreenshot(false));
+        Menu borderMenu = createBorderColorMenu();
         Menu mainMenu = Menu.menu("Light Screenshot")
-                .withMenuItems(item);
+                .withMenuItems(filtered, original, borderMenu);
 
         api.userInterface().menuBar().registerMenu(mainMenu);
     }
 
-    private void handleLightScreenshot() {
+    private Menu createBorderColorMenu() {
+        List<MenuItem> items = new ArrayList<>();
+        for (SelectionAppearance.Preset p : SelectionAppearance.PRESETS) {
+            items.add(BasicMenuItem.basicMenuItem(p.label()).withAction(() -> {
+                SelectionAppearance.setSelectionBorderColor(p.color());
+                api.logging().logToOutput("Light screenshot: bordo selezione impostato a " + p.label());
+            }));
+        }
+        items.add(BasicMenuItem.basicMenuItem("Reset to JVM property/default").withAction(() -> {
+            SelectionAppearance.resetToPropertyOrDefault();
+            api.logging().logToOutput("Light screenshot: bordo selezione ripristinato (property/default).");
+        }));
+        return Menu.menu("Selection border color").withMenuItems(items.toArray(new MenuItem[0]));
+    }
+
+    private void handleLightScreenshot(boolean applyFilter) {
         EventQueue.invokeLater(() -> {
             Frame burpFrame = locateBurpFrame();
             if (burpFrame == null) {
@@ -65,7 +86,7 @@ public class BurpExtender implements BurpExtension {
                 }
                 api.logging().logToOutput("Light screenshot: regione selezionata " + rectangle);
                 // Robot + filtro + xclip/wl-copy NON vanno sull’EDT: bloccherebbero Burp e il repaint del glass pane.
-                new Thread(() -> LightThemeCapture.captureRegionToClipboard(burpFrame, rectangle, api.logging()),
+                new Thread(() -> LightThemeCapture.captureRegionToClipboard(burpFrame, rectangle, api.logging(), applyFilter),
                         "burp-light-screenshot").start();
             });
         });

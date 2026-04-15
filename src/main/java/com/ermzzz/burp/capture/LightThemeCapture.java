@@ -31,6 +31,10 @@ public final class LightThemeCapture {
      * possono bloccare a lungo; sull’EDT congelerebbero l’interfaccia.
      */
     public static void captureRegionToClipboard(Frame burpFrame, Rectangle region, Logging logging) {
+        captureRegionToClipboard(burpFrame, region, logging, true);
+    }
+
+    public static void captureRegionToClipboard(Frame burpFrame, Rectangle region, Logging logging, boolean applyFilter) {
         if (burpFrame == null || region == null) {
             return;
         }
@@ -48,9 +52,14 @@ public final class LightThemeCapture {
             logging.logToOutput("Light screenshot: cattura completata (" + w + "x" + h + ")");
 
             BufferedImage raw = toBufferedImage(image);
-            logging.logToOutput("Light screenshot: applico filtro stile documento (dark -> report chiaro)...");
-            BufferedImage doc = DocumentLightFilter.toDocumentStyle(raw);
-            ClipboardCapture.copyImageToClipboard(doc, logging);
+            if (applyFilter) {
+                logging.logToOutput("Light screenshot: applico filtro stile documento (dark -> report chiaro)...");
+                BufferedImage doc = DocumentLightFilter.toDocumentStyle(raw);
+                ClipboardCapture.copyImageToClipboard(doc, logging);
+            } else {
+                logging.logToOutput("Light screenshot: modalità colori originali (nessun filtro).");
+                ClipboardCapture.copyImageToClipboard(raw, logging);
+            }
         } catch (Throwable t) {
             logging.logToError("Light screenshot capture failed: " + t);
             StringWriter sw = new StringWriter();
