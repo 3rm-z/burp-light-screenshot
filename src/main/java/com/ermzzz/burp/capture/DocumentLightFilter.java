@@ -94,6 +94,8 @@ public final class DocumentLightFilter {
                 int rgb = (ri << 16) | (gi << 8) | bi;
                 out.setRGB(x, y, rgb);
             }
+        }
+
         applyLuminanceHistogramStretch(out);
         FlatLafApproxFilter.apply(out);
         LightOutputSharpen.apply(out);

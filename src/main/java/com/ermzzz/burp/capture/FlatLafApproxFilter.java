@@ -84,7 +84,7 @@ public final class FlatLafApproxFilter {
                     tg = HEADER_BLUE_G;
                     tb = HEADER_BLUE_B;
                 } else if (H >= 0.50f && H <= 0.70f && S > 0.10f && Br > 0.18f) {
-                    a = smoothstep(0.10f, 0.38f, S) * 0.32f;
+                    a = smoothstep(0.10f, 0.38f, S) * 0.18f;
                     tr = 25;
                     tg = 118;
                     tb = 210;
