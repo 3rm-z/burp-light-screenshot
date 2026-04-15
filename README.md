@@ -1,8 +1,8 @@
-# Burp Light Screenshot Helper
+# Burp Light Screenshot
 
 Burp (Montoya) extension for region screenshots with two output modes:
 
-- `Report / light`: converts dark UI captures to a light, document-friendly style.
+- `Report / light`: generates light-mode screenshots while you keep working in dark mode.
 - `Original colors`: keeps source colors unchanged.
 
 Each capture is copied to clipboard and also saved as a temporary PNG.
@@ -67,3 +67,7 @@ See `TODO.md`.
 ## Release
 
 See `RELEASE_CHECKLIST.md` before packaging/submission.
+
+## BApp Submission
+
+See `BAPP_STORE_TEXT.md` for ready-to-use store copy.

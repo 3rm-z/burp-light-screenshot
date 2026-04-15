@@ -23,9 +23,9 @@ public class BurpExtender implements BurpExtension {
     public void initialize(MontoyaApi api) {
         this.api = api;
 
-        api.extension().setName("Light Screenshot Helper");
+        api.extension().setName("Burp Light Screenshot");
 
-        api.logging().logToOutput("Light Screenshot Helper loaded");
+        api.logging().logToOutput("Burp Light Screenshot loaded");
         if (System.getProperty(SelectionAppearance.PROPERTY_SELECTION_COLOR) != null) {
             api.logging().logToOutput("Light Screenshot: selection border = "
                     + SelectionAppearance.selectionBorderColor() + " (-D" + SelectionAppearance.PROPERTY_SELECTION_COLOR + ")");
@@ -94,14 +94,14 @@ public class BurpExtender implements BurpExtension {
             if (burpFrame == null) {
                 JOptionPane.showMessageDialog(null,
                         "Unable to find the main Burp window.",
-                        "Light Screenshot Helper",
+                        "Burp Light Screenshot",
                         JOptionPane.WARNING_MESSAGE);
                 return;
             }
             if (!(burpFrame instanceof JFrame)) {
                 JOptionPane.showMessageDialog(burpFrame,
                         "The Burp window is not a JFrame: region selection (glass pane) is unavailable.",
-                        "Light Screenshot Helper",
+                        "Burp Light Screenshot",
                         JOptionPane.WARNING_MESSAGE);
                 return;
             }
