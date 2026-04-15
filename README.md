@@ -15,6 +15,12 @@ gradle jar
 
 Load the generated JAR in Burp `Extensions`.
 
+## Install (GitHub Release)
+
+- Download the latest JAR from the GitHub Releases page.
+- In Burp, open `Extensions` -> `Installed` -> `Add`.
+- Select type `Java`, then load the downloaded JAR.
+
 ## Burp Menu
 
 The `Light Screenshot` menu includes:
