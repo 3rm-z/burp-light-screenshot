@@ -2,9 +2,7 @@ package com.ermzzz.burp;
 
 import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
-import burp.api.montoya.ui.menu.Menu;
-import burp.api.montoya.ui.menu.MenuItem;
-import burp.api.montoya.ui.menu.BasicMenuItem;
+import burp.api.montoya.core.Registration;
 
 import com.ermzzz.burp.config.SelectionAppearance;
 import com.ermzzz.burp.ui.RegionSelectorOverlay;
@@ -12,14 +10,14 @@ import com.ermzzz.burp.capture.LightThemeCapture;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 
 public class BurpExtender implements BurpExtension {
 
     private MontoyaApi api;
+    private Registration menuRegistration;
+    private volatile boolean applyFilter = true;
 
     @Override
     public void initialize(MontoyaApi api) {
@@ -33,40 +31,61 @@ public class BurpExtender implements BurpExtension {
                     + SelectionAppearance.selectionBorderColor() + " (-D" + SelectionAppearance.PROPERTY_SELECTION_COLOR + ")");
         }
 
-        BasicMenuItem filtered = BasicMenuItem
-                .basicMenuItem("Select region -> Clipboard (report / chiaro)")
-                .withAction(() -> handleLightScreenshot(true));
-        BasicMenuItem original = BasicMenuItem
-                .basicMenuItem("Select region -> Clipboard (original colors)")
-                .withAction(() -> handleLightScreenshot(false));
-        MenuItem[] borderItems = createBorderColorItems();
-        Menu mainMenu = Menu.menu("Light Screenshot")
-                .withMenuItems(combineMenuItems(filtered, original, borderItems));
-
-        api.userInterface().menuBar().registerMenu(mainMenu);
+        JMenu menu = buildSwingMenu();
+        menuRegistration = api.userInterface().menuBar().registerMenu(menu);
     }
 
-    private MenuItem[] createBorderColorItems() {
-        List<MenuItem> items = new ArrayList<>();
+    private JMenu buildSwingMenu() {
+        JMenu root = new JMenu("Light Screenshot");
+
+        JMenuItem takeScreenshot = new JMenuItem("Take screenshot -> Clipboard");
+        takeScreenshot.addActionListener(e -> handleLightScreenshot(applyFilter));
+        root.add(takeScreenshot);
+
+        JMenu colorModeMenu = new JMenu("Color mode");
+        ButtonGroup colorModeGroup = new ButtonGroup();
+        JRadioButtonMenuItem reportLight = new JRadioButtonMenuItem("Report / chiaro", true);
+        reportLight.addActionListener(e -> {
+            applyFilter = true;
+            api.logging().logToOutput("Light screenshot: color mode = report / chiaro");
+        });
+        JRadioButtonMenuItem original = new JRadioButtonMenuItem("Original colors", false);
+        original.addActionListener(e -> {
+            applyFilter = false;
+            api.logging().logToOutput("Light screenshot: color mode = original colors");
+        });
+        colorModeGroup.add(reportLight);
+        colorModeGroup.add(original);
+        colorModeMenu.add(reportLight);
+        colorModeMenu.add(original);
+        root.add(colorModeMenu);
+
+        JMenu borderColorMenu = new JMenu("Border color");
+        ButtonGroup borderGroup = new ButtonGroup();
         for (SelectionAppearance.Preset p : SelectionAppearance.PRESETS) {
-            items.add(BasicMenuItem.basicMenuItem("[Border] " + p.label()).withAction(() -> {
+            boolean selected = SelectionAppearance.selectionBorderColor().equals(p.color());
+            JRadioButtonMenuItem item = new JRadioButtonMenuItem(p.label(), selected);
+            item.addActionListener(e -> {
                 SelectionAppearance.setSelectionBorderColor(p.color());
                 api.logging().logToOutput("Light screenshot: bordo selezione impostato a " + p.label());
-            }));
+            });
+            borderGroup.add(item);
+            borderColorMenu.add(item);
         }
-        items.add(BasicMenuItem.basicMenuItem("[Border] Reset to JVM property/default").withAction(() -> {
+        JMenuItem reset = new JMenuItem("Reset");
+        reset.addActionListener(e -> {
             SelectionAppearance.resetToPropertyOrDefault();
             api.logging().logToOutput("Light screenshot: bordo selezione ripristinato (property/default).");
-        }));
-        return items.toArray(new MenuItem[0]);
-    }
+            if (menuRegistration != null) {
+                menuRegistration.deregister();
+            }
+            menuRegistration = api.userInterface().menuBar().registerMenu(buildSwingMenu());
+        });
+        borderColorMenu.addSeparator();
+        borderColorMenu.add(reset);
+        root.add(borderColorMenu);
 
-    private MenuItem[] combineMenuItems(MenuItem first, MenuItem second, MenuItem[] others) {
-        MenuItem[] all = new MenuItem[2 + others.length];
-        all[0] = first;
-        all[1] = second;
-        System.arraycopy(others, 0, all, 2, others.length);
-        return all;
+        return root;
     }
 
     private void handleLightScreenshot(boolean applyFilter) {

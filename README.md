@@ -14,15 +14,15 @@ Carica il JAR generato in **Extensions**.
 
 Nel menu `Light Screenshot` trovi:
 
-- `Select region -> Clipboard (report / chiaro)` → applica il filtro colore
-- `Select region -> Clipboard (original colors)` → nessun filtro (1:1 rispetto allo schermo)
-- voci `[Border] ...` → preset rapidi (neon) + reset
+- `Take screenshot -> Clipboard` → avvia la selezione regione usando la modalità colore attiva
+- `Color mode` → scelta esclusiva tra `Report / chiaro` e `Original colors`
+- `Border color` → preset rapidi (neon) + `Reset`
 
 ## Personalizzazione bordo selezione
 
 Puoi cambiare il colore in due modi:
 
-1. **Da menu Burp**: voci `Light Screenshot -> [Border] ...`
+1. **Da menu Burp**: `Light Screenshot -> Border color`
 2. **Da JVM property** (default all'avvio), ad esempio:
 
 ```text
