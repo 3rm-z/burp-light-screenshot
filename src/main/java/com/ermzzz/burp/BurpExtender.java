@@ -39,26 +39,34 @@ public class BurpExtender implements BurpExtension {
         BasicMenuItem original = BasicMenuItem
                 .basicMenuItem("Select region -> Clipboard (original colors)")
                 .withAction(() -> handleLightScreenshot(false));
-        Menu borderMenu = createBorderColorMenu();
+        MenuItem[] borderItems = createBorderColorItems();
         Menu mainMenu = Menu.menu("Light Screenshot")
-                .withMenuItems(filtered, original, borderMenu);
+                .withMenuItems(combineMenuItems(filtered, original, borderItems));
 
         api.userInterface().menuBar().registerMenu(mainMenu);
     }
 
-    private Menu createBorderColorMenu() {
+    private MenuItem[] createBorderColorItems() {
         List<MenuItem> items = new ArrayList<>();
         for (SelectionAppearance.Preset p : SelectionAppearance.PRESETS) {
-            items.add(BasicMenuItem.basicMenuItem(p.label()).withAction(() -> {
+            items.add(BasicMenuItem.basicMenuItem("[Border] " + p.label()).withAction(() -> {
                 SelectionAppearance.setSelectionBorderColor(p.color());
                 api.logging().logToOutput("Light screenshot: bordo selezione impostato a " + p.label());
             }));
         }
-        items.add(BasicMenuItem.basicMenuItem("Reset to JVM property/default").withAction(() -> {
+        items.add(BasicMenuItem.basicMenuItem("[Border] Reset to JVM property/default").withAction(() -> {
             SelectionAppearance.resetToPropertyOrDefault();
             api.logging().logToOutput("Light screenshot: bordo selezione ripristinato (property/default).");
         }));
-        return Menu.menu("Selection border color").withMenuItems(items.toArray(new MenuItem[0]));
+        return items.toArray(new MenuItem[0]);
+    }
+
+    private MenuItem[] combineMenuItems(MenuItem first, MenuItem second, MenuItem[] others) {
+        MenuItem[] all = new MenuItem[2 + others.length];
+        all[0] = first;
+        all[1] = second;
+        System.arraycopy(others, 0, all, 2, others.length);
+        return all;
     }
 
     private void handleLightScreenshot(boolean applyFilter) {

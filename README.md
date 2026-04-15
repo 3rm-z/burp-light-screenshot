@@ -16,13 +16,13 @@ Nel menu `Light Screenshot` trovi:
 
 - `Select region -> Clipboard (report / chiaro)` → applica il filtro colore
 - `Select region -> Clipboard (original colors)` → nessun filtro (1:1 rispetto allo schermo)
-- `Selection border color` → preset rapidi (neon) + reset
+- voci `[Border] ...` → preset rapidi (neon) + reset
 
 ## Personalizzazione bordo selezione
 
 Puoi cambiare il colore in due modi:
 
-1. **Da menu Burp**: `Light Screenshot -> Selection border color`
+1. **Da menu Burp**: voci `Light Screenshot -> [Border] ...`
 2. **Da JVM property** (default all'avvio), ad esempio:
 
 ```text
