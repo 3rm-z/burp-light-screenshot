@@ -14,9 +14,9 @@ public final class FlatLafApproxFilter {
     private static final int ORANGE_B = 0;
 
     /** Burp AI — indigo più chiaro (#5C6BC0). */
-    private static final int AI_R = 110;
-    private static final int AI_G = 125;
-    private static final int AI_B = 210;
+    private static final int AI_R = 130;
+    private static final int AI_G = 145;
+    private static final int AI_B = 230;
 
     /** Verde status più vivo (#43A047). */
     private static final int GREEN_R = 67;
@@ -78,9 +78,9 @@ public final class FlatLafApproxFilter {
                     tr = 25;
                     tg = 118;
                     tb = 210;
-                } else if (H >= 0.33f && H <= 0.56f && S > 0.06f) {
+                } else if (H >= 0.28f && H <= 0.62f && S > 0.04f) {
                     // Header teal anche se poco saturi (dopo filtro finiscono grigi)
-                    a = smoothstep(0.06f, 0.32f, S) * 0.62f;
+                    a = smoothstep(0.04f, 0.28f, S) * 0.65f;
                     tr = 0;
                     tg = 107;
                     tb = 107;
