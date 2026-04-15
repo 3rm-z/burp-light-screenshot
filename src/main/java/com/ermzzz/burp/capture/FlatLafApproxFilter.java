@@ -77,14 +77,15 @@ public final class FlatLafApproxFilter {
                     tr = 142;
                     tg = 36;
                     tb = 170;
-                } else if (H >= 0.52f && H <= 0.69f && S >= 0.03f && S <= 0.22f && Br > 0.50f) {
-                    // Header "bluino" spesso poco saturi dopo la conversione
-                    a = smoothstep(0.03f, 0.16f, S) * 0.70f;
+                } else if (H >= 0.52f && H <= 0.72f && S >= 0.03f && S <= 0.55f && Br > 0.50f) {
+                    // Header "bluino": dopo DocumentLightFilter la saturazione sale a ~0.45, S <= 0.55 lo cattura
+                    a = smoothstep(0.03f, 0.30f, S) * 0.85f;
                     tr = HEADER_BLUE_R;
                     tg = HEADER_BLUE_G;
                     tb = HEADER_BLUE_B;
-                } else if (H >= 0.50f && H <= 0.70f && S > 0.10f && Br > 0.18f) {
-                    a = smoothstep(0.10f, 0.38f, S) * 0.18f;
+                } else if (H >= 0.50f && H <= 0.70f && S > 0.55f && Br > 0.18f) {
+                    // Blu stringhe/valori (S alta, > 0.55)
+                    a = smoothstep(0.55f, 0.80f, S) * 0.18f;
                     tr = 25;
                     tg = 118;
                     tb = 210;
