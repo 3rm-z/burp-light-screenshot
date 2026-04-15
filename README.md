@@ -66,6 +66,14 @@ Logs include `DISPLAY`, `WAYLAND_DISPLAY`, and command outcomes to simplify trou
 If AWT image paste fails, the extension also attempts clipboard set via
 PowerShell (`powershell.exe -Sta`) using `System.Windows.Forms.Clipboard::SetImage`.
 
+## Known Limitations
+
+- Captures are tied to the active Burp UI context/window at selection time.
+- Some task/result views that open in separate contexts (for example certain Intruder result tabs)
+  may not be directly capturable from the same selection flow.
+- Workaround: capture the same data from persistent views (for example Dashboard/history views)
+  where results are still visible in the main Burp context.
+
 ## Backlog
 
 See `TODO.md`.

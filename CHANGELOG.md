@@ -15,3 +15,4 @@ All notable changes to this project are documented here.
 
 ### Notes
 - Core value: create light-mode screenshots while continuing to use Burp in dark mode.
+- Known limitation documented: capture flow is tied to active Burp UI context (some task-specific tabs may require dashboard/history workaround).

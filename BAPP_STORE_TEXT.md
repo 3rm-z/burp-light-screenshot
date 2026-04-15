@@ -27,3 +27,5 @@ The extension focuses on practical reporting speed:
 - Host/guest clipboard behavior can differ in VM setups.
 - Linux reliability depends on available native clipboard tools and display session.
 - Report/light conversion is heuristic-based and may vary with source contrast/theme details.
+- Captures are tied to the active Burp UI context/window; some task-specific result tabs
+  (for example certain Intruder views) may need to be captured from persistent Dashboard/history views instead.
