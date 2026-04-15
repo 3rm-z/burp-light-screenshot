@@ -3,7 +3,7 @@ package com.ermzzz.burp.capture;
 import java.awt.image.BufferedImage;
 
 /**
- * Leggero sharpening sui toni medi (testo) per ridurre l’effetto “sgranato” dopo i filtri colore.
+ * Light sharpening on mid tones (text) to reduce grainy look after color filtering.
  */
 public final class LightOutputSharpen {
 

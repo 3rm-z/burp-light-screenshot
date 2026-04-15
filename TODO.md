@@ -1,34 +1,30 @@
-# Burp Light Screenshot — backlog
+# Burp Light Screenshot - Backlog
 
-Ordine approssimativo; spunta o riordina quando serve.
+Rough priority order; reorder as needed.
 
-## Bug / affidabilità
+## Bugs / Reliability
 
-- [x] **Freeze UI / riquadro grigio**: cattura + clipboard spostate su thread di lavoro; AWT clipboard con `invokeAndWait` sull’EDT; glass pane ripristinato in `finally`
-- [ ] **Clipboard Linux / VM→host**: se `xclip` exit 0 ma l’immagine non arriva su Windows → spesso sync guest solo **testo**; workaround = PNG in `/tmp` o cartella condivisa
-- [x] **Clipboard Linux (Kali/i3)**: niente AWT; `xclip -i`; `DISPLAY`/`XAUTHORITY`; clipboard + primary; prova xclip prima se `DISPLAY` settato (ibrido Wayland)
-- [x] **Clipboard Windows**: AWT dal worker + fallback PowerShell WinForms (`ClipboardCapture`)
-- [ ] **Conferma** che Burp non venga più avviato in modo che `PATH` non includa `/usr/bin` (GUI vs terminale)
+- [x] **UI freeze / gray overlay**: moved capture + clipboard to worker thread, EDT `invokeAndWait` for AWT clipboard, always restore glass pane in `finally`
+- [ ] **Linux clipboard / guest-host sync**: if `xclip` exits 0 but image is not visible on host, document VM sync limitations and fallback workflow
+- [x] **Linux clipboard robustness**: no AWT-by-default path, `xclip -i` variants, `DISPLAY`/`XAUTHORITY`, both clipboard + primary selections
+- [x] **Windows clipboard robustness**: worker-thread AWT + PowerShell WinForms fallback (`ClipboardCapture`)
+- [ ] **Launch context check**: verify Burp startup environment always includes required clipboard tools on Linux
 
-## Qualità immagine
+## Image Quality
 
-- [ ] Affinare ancora filtro report se serve (dopo tuning gamma/saturazione/value)
-- [x] Opzione menu **screenshot senza filtro** (tema scuro originale 1:1) per confronto / report dove va bene il dark
+- [ ] Further tune report filter if needed (gamma/saturation/value)
+- [x] Menu option for **unfiltered screenshot** (original dark colors 1:1)
 
 ## UX
 
-- [x] **Colore bordo selezione** personalizzabile via `-Dburp.lightss.selection.color=...` (vedi README)
-- [x] **Preset colore bordo** da menu Burp (`Selection border color`) + reset a property/default
-- [ ] UI in-estensione (tab) per colore bordo senza modificare lo script di avvio Burp
-- [ ] Feedback **modalità screenshot** (cursore crosshair già possibile sul glass pane; messaggio status bar / dialog leggero “Seleziona regione…”)
-- [ ] **Conferma visiva** a fine capture (toast / riga Output già presente — eventualmente dialog non modale “Copiato + path file”)
-- [x] **Esc** per uscire dalla selezione senza rettangolo
+- [x] Custom **selection border color** via `-Dburp.lightss.selection.color=...` (see README)
+- [x] Burp menu **border presets** + reset to property/default
+- [ ] Optional in-extension settings tab for border color (no startup script edits required)
+- [ ] Clearer **capture mode feedback** (status text or lightweight prompt before selection)
+- [ ] Optional **capture completion feedback** (toast or non-modal confirmation)
+- [x] **Esc** cancels selection
 
-## Documentazione
+## Documentation
 
-- [x] README: build, bordo, Linux, **come quantificare** output filtro
-- [ ] Nota VM: clipboard immagini host/guest
-
----
-
-*Ultimo aggiornamento: manutenzione freeze EDT / overlay.*
+- [x] README: build, border options, Linux/Windows clipboard behavior
+- [ ] Add a short release checklist for packaging and store submission

@@ -4,11 +4,11 @@ import java.awt.Color;
 import java.awt.image.BufferedImage;
 
 /**
- * Trasforma uno screenshot del tema scuro di Burp in uno stile “documento chiaro” per i report.
+ * Transforms a Burp dark-theme screenshot into a report-friendly light document style.
  * <p>
- * Dopo la mappatura inversa luminanza, applica uno <strong>stretch percentile</strong> sulla luminanza
- * (simile a Livelli in GIMP) per togliere il “velo grigio” quando i bianchi restano ammassati sotto 240.
- * I pixel quasi neutri (carta) non passano da HSB aggressivo, così non si fangono ulteriormente.
+ * After inverse luminance mapping, applies percentile-based luminance stretching
+ * (similar to image levels adjustment) to avoid a gray veil when highlights cluster below 240.
+ * Near-neutral paper pixels skip aggressive HSB processing to avoid muddy tinting.
  */
 public final class DocumentLightFilter {
 
@@ -18,13 +18,13 @@ public final class DocumentLightFilter {
     private static final float SATURATION_BOOST = 1.52f;
     private static final float VALUE_BOOST = 1.06f;
     private static final float LUM_FLOOR = 0.018f;
-    /** ≥ PAPER_L / LUM_FLOOR */
+    /** >= PAPER_L / LUM_FLOOR */
     private static final float SCALE_CAP = 60f;
 
-    /** Percentili luminanza per lo stretch (esclude outlier). */
+    /** Luminance percentiles for stretching (outliers excluded). */
     private static final float STRETCH_LOW_FRACT = 0.02f;
     private static final float STRETCH_HIGH_FRACT = 0.02f;
-    /** Output luminanza dopo stretch: lascia un po’ di inchiostro sotto. */
+    /** Output luminance range after stretching: keeps a bit of ink in dark regions. */
     private static final int STRETCH_OUT_LOW = 12;
     private static final int STRETCH_OUT_HIGH = 255;
 
@@ -74,7 +74,7 @@ public final class DocumentLightFilter {
                 float chroma = maxc - minc;
 
                 if (chroma < 0.07f && lum > 0.72f) {
-                    // Carta / grigi chiari: niente HSB (evita tinte sporche), avvicina al bianco
+                    // Paper / light grays: skip HSB to avoid color casts, gently move toward white.
                     float whiten = smoothstep(0.72f, 0.93f, lum) * 0.45f;
                     ri = blend255(ri, whiten);
                     gi = blend255(gi, whiten);
@@ -103,7 +103,7 @@ public final class DocumentLightFilter {
     }
 
     /**
-     * Allarga il range luminanza (2°–98° percentile → [STRETCH_OUT_LOW, STRETCH_OUT_HIGH]) mantenendo il rapporto RGB.
+     * Expands luminance range (2nd-98th percentile -> [STRETCH_OUT_LOW, STRETCH_OUT_HIGH]) while preserving RGB ratio.
      */
     private static void applyLuminanceHistogramStretch(BufferedImage img) {
         int w = img.getWidth();

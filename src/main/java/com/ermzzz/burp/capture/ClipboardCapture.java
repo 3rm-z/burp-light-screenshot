@@ -25,10 +25,10 @@ public class ClipboardCapture {
     private static Transferable lastTransferable;
 
     /**
-     * Scrive PNG, copia su clipboard (AWT su EDT + tool nativi Linux sul thread chiamante) e logga il path.
+     * Writes PNG, copies to clipboard (AWT on EDT + Linux native tools on caller thread), and logs the path.
      * <p>
-     * Chiamare da un <strong>thread di lavoro</strong>, non dall’EDT: così {@code waitFor()} di xclip/wl-copy
-     * non blocca l’interfaccia di Burp.
+     * Run on a <strong>worker thread</strong>, not EDT, so xclip/wl-copy {@code waitFor()} calls
+     * do not block Burp UI.
      */
     public static void copyImageToClipboard(Image image, Logging logging) {
         if (image == null) {
@@ -37,10 +37,10 @@ public class ClipboardCapture {
         try {
             BufferedImage buffered = toBufferedImage(image);
 
-            // 1) Sempre PNG su disco (serve per xclip/wl-copy e fallback utente)
+            // 1) Always persist PNG to disk (used by xclip/wl-copy and user fallback).
             Path saved = saveTempPng(buffered);
             if (saved != null) {
-                logging.logToOutput("Light screenshot: PNG salvato: " + saved.toAbsolutePath());
+                logging.logToOutput("Light screenshot: PNG saved: " + saved.toAbsolutePath());
             }
 
             if (!isLinux()) {
@@ -55,14 +55,13 @@ public class ClipboardCapture {
                 linuxSleepAfterPngWrite();
                 boolean nativeOk = tryLinuxClipboardFromFile(saved, logging);
                 if (!nativeOk) {
-                    logging.logToOutput("Light screenshot: xclip/wl-copy non riuscito — provo fallback AWT.");
+                    logging.logToOutput("Light screenshot: xclip/wl-copy failed; trying AWT fallback.");
                     setAwtClipboardContents(buffered, logging);
-                    logging.logToOutput("Light screenshot: File PNG salvato sopra; "
-                            + "VM→host spesso sincronizza solo testo, non immagini.");
+                    logging.logToOutput("Light screenshot: PNG path above can be used as manual fallback.");
                 }
             }
         } catch (Exception e) {
-            logging.logToError("Light screenshot: copia in clipboard fallita: " + e.getMessage());
+            logging.logToError("Light screenshot: clipboard copy failed: " + e.getMessage());
         }
     }
 
@@ -71,13 +70,13 @@ public class ClipboardCapture {
             doAwtClipboardSet(buffered, logging);
             return;
         }
-        // Su Windows Burp spesso accetta setContents dal worker; invokeAndWait può fallire o andare in stallo in alcuni setup.
+        // On Windows this often works from worker threads; invokeAndWait may fail or stall in some setups.
         if (isWindows()) {
             try {
                 doAwtClipboardSet(buffered, logging);
                 return;
             } catch (Exception e) {
-                logging.logToOutput("Light screenshot: AWT da worker fallita, provo su EDT: " + e.getMessage());
+                logging.logToOutput("Light screenshot: AWT from worker failed, retrying on EDT: " + e.getMessage());
             }
         }
         try {
@@ -90,7 +89,7 @@ public class ClipboardCapture {
             });
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            logging.logToError("Light screenshot: AWT clipboard interrotta.");
+            logging.logToError("Light screenshot: AWT clipboard interrupted.");
         } catch (InvocationTargetException e) {
             Throwable c = e.getCause();
             logging.logToError("Light screenshot: AWT clipboard (EDT): " + (c != null ? c.getMessage() : e.getMessage()));
@@ -103,7 +102,7 @@ public class ClipboardCapture {
         lastTransferable = t;
         ClipboardOwner owner = (cb, contents) -> { };
         clipboard.setContents(t, owner);
-        logging.logToOutput("Light screenshot: system clipboard (AWT) aggiornata.");
+        logging.logToOutput("Light screenshot: system clipboard (AWT) updated.");
     }
 
     private static boolean isWindows() {
@@ -111,7 +110,7 @@ public class ClipboardCapture {
     }
 
     /**
-     * Clipboard immagine tramite PowerShell + WinForms (STA). Utile quando l’AWT clipboard con Burp non incolla.
+     * Sets image clipboard via PowerShell + WinForms (STA), useful when AWT clipboard does not paste.
      */
     private static void tryWindowsClipboardFromPngFile(Path pngFile, Logging logging) {
         String path = pngFile.toAbsolutePath().toString().replace("'", "''");
@@ -130,16 +129,16 @@ public class ClipboardCapture {
             String out = readStream(p.getInputStream());
             int code = p.waitFor();
             if (code == 0) {
-                logging.logToOutput("Light screenshot: clipboard immagine via PowerShell (WinForms).");
+                logging.logToOutput("Light screenshot: image clipboard set via PowerShell (WinForms).");
             } else {
                 logging.logToOutput("Light screenshot: PowerShell clipboard exit " + code
                         + (out.isBlank() ? "" : (": " + out.trim())));
             }
         } catch (IOException e) {
-            logging.logToOutput("Light screenshot: PowerShell clipboard non eseguibile: " + e.getMessage());
+            logging.logToOutput("Light screenshot: PowerShell clipboard not executable: " + e.getMessage());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            logging.logToError("Light screenshot: PowerShell clipboard interrotto.");
+            logging.logToError("Light screenshot: PowerShell clipboard interrupted.");
         }
     }
 
@@ -164,7 +163,7 @@ public class ClipboardCapture {
 
     private static String envOrDash(String name) {
         String v = System.getenv(name);
-        return v == null || v.isEmpty() ? "(non impostato)" : v;
+        return v == null || v.isEmpty() ? "(not set)" : v;
     }
 
     private static void applyLinuxX11Env(ProcessBuilder pb) {
@@ -181,9 +180,9 @@ public class ClipboardCapture {
     }
 
     /**
-     * Su i3/X11 conviene xclip anche se WAYLAND_DISPLAY è settato (XWayland / sessioni ibride).
+     * Prefer xclip on X11 even if WAYLAND_DISPLAY is set (XWayland / hybrid sessions).
      *
-     * @return true se la selection {@code clipboard} è stata impostata con successo
+     * @return true if {@code clipboard} selection was set successfully
      */
     private static boolean tryLinuxClipboardFromFile(Path pngFile, Logging logging) {
         logLinuxClipboardEnv(logging);
@@ -191,7 +190,7 @@ public class ClipboardCapture {
         try {
             pngData = Files.readAllBytes(pngFile);
         } catch (IOException e) {
-            logging.logToOutput("Light screenshot: lettura PNG per clipboard fallita: " + e.getMessage());
+            logging.logToOutput("Light screenshot: failed reading PNG for clipboard: " + e.getMessage());
             return false;
         }
         if (pngData.length == 0) {
@@ -226,17 +225,17 @@ public class ClipboardCapture {
                 int code = p.waitFor();
                 String out = readStream(p.getInputStream());
                 if (code == 0) {
-                    logging.logToOutput("Light screenshot: clipboard immagine via wl-copy (Wayland).");
+                    logging.logToOutput("Light screenshot: image clipboard set via wl-copy (Wayland).");
                     return true;
                 }
                 if (!out.isBlank()) {
                     logging.logToOutput("Light screenshot: wl-copy [" + bin + "] exit " + code + ": " + out.trim());
                 }
             } catch (IOException e) {
-                logging.logToOutput("Light screenshot: wl-copy non eseguibile (" + bin + "): " + e.getMessage());
+                logging.logToOutput("Light screenshot: wl-copy not executable (" + bin + "): " + e.getMessage());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                logging.logToError("Light screenshot: wl-copy interrotto.");
+                logging.logToError("Light screenshot: wl-copy interrupted.");
                 return false;
             }
         }
@@ -244,15 +243,15 @@ public class ClipboardCapture {
     }
 
     /**
-     * Legge PNG in memoria una sola volta; ogni xclip riceve i byte su stdin (evita bug
-     * {@code redirectInput(File)} su seconda invocazione / primary).
+     * Reads PNG once in memory; each xclip process receives bytes on stdin (avoids
+     * {@code redirectInput(File)} issues on repeated invocations / primary).
      */
     private static boolean tryXclipFromPngBytes(byte[] pngData, Logging logging) {
         String[] bins = {"/usr/bin/xclip", "/bin/xclip", "xclip"};
         boolean clipboardOk = false;
         for (String bin : bins) {
             if (runXclip(bin, pngData, "clipboard", logging)) {
-                logging.logToOutput("Light screenshot: clipboard immagine via xclip (selection=clipboard) [" + bin + "].");
+                logging.logToOutput("Light screenshot: image clipboard set via xclip (selection=clipboard) [" + bin + "].");
                 clipboardOk = true;
                 break;
             }
@@ -260,7 +259,7 @@ public class ClipboardCapture {
         if (clipboardOk) {
             for (String bin : bins) {
                 if (runXclip(bin, pngData, "primary", logging)) {
-                    logging.logToOutput("Light screenshot: xclip anche selection=primary (middle-click) [" + bin + "].");
+                    logging.logToOutput("Light screenshot: xclip also set selection=primary (middle-click) [" + bin + "].");
                     break;
                 }
             }
@@ -299,12 +298,12 @@ public class ClipboardCapture {
             if (code == 0) {
                 return true;
             }
-            logXclipFail(bin, selection, code, out, logging, dashI ? "con -i" : "senza -i");
+            logXclipFail(bin, selection, code, out, logging, dashI ? "with -i" : "without -i");
         } catch (IOException e) {
             logging.logToOutput("Light screenshot: xclip [" + bin + "] " + selection + ": " + e.getMessage());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            logging.logToError("Light screenshot: xclip interrotto.");
+            logging.logToError("Light screenshot: xclip interrupted.");
         }
         return false;
     }
@@ -321,12 +320,12 @@ public class ClipboardCapture {
             if (code == 0) {
                 return true;
             }
-            logXclipFail(bin, selection, code, out, logging, "ordine -t prima");
+            logXclipFail(bin, selection, code, out, logging, "order with -t first");
         } catch (IOException e) {
-            logging.logToOutput("Light screenshot: xclip ordine2 [" + bin + "]: " + e.getMessage());
+            logging.logToOutput("Light screenshot: xclip order2 [" + bin + "]: " + e.getMessage());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            logging.logToError("Light screenshot: xclip interrotto.");
+            logging.logToError("Light screenshot: xclip interrupted.");
         }
         return false;
     }

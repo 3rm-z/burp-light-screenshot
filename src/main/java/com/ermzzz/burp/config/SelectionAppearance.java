@@ -4,9 +4,9 @@ import java.awt.Color;
 import java.util.List;
 
 /**
- * Aspetto del rettangolo di selezione screenshot.
+ * Appearance settings for screenshot selection border.
  * <p>
- * JVM: {@code -Dburp.lightss.selection.color=...} (vedi {@link #parseColor(String)}).
+ * JVM option: {@code -Dburp.lightss.selection.color=...} (see {@link #parseColor(String)}).
  */
 public final class SelectionAppearance {
 
@@ -19,14 +19,14 @@ public final class SelectionAppearance {
     private static volatile Color currentColor = loadFromPropertyOrDefault();
 
     public static final List<Preset> PRESETS = List.of(
-            new Preset("Neon Cyan", new Color(0, 229, 255, 220)),
-            new Preset("Neon Magenta", new Color(255, 0, 191, 220)),
-            new Preset("Neon Lime", new Color(57, 255, 20, 220)),
-            new Preset("Neon Orange", new Color(255, 122, 0, 220)),
-            new Preset("Neon Red", new Color(255, 45, 45, 220))
+            new Preset("Cyan", new Color(0, 229, 255, 220)),
+            new Preset("Magenta", new Color(255, 0, 191, 220)),
+            new Preset("Lime", new Color(57, 255, 20, 220)),
+            new Preset("Orange", new Color(255, 122, 0, 220)),
+            new Preset("Red", new Color(255, 45, 45, 220))
     );
 
-    /** Colore bordo overlay attuale (runtime). */
+    /** Current runtime overlay border color. */
     public static Color selectionBorderColor() {
         return currentColor;
     }
@@ -41,7 +41,7 @@ public final class SelectionAppearance {
         currentColor = loadFromPropertyOrDefault();
     }
 
-    /** Colore bordo overlay da property JVM o default. */
+    /** Overlay border color from JVM property or default value. */
     private static Color loadFromPropertyOrDefault() {
         String raw = System.getProperty(PROPERTY_SELECTION_COLOR);
         if (raw == null || raw.isBlank()) {
@@ -55,11 +55,11 @@ public final class SelectionAppearance {
     }
 
     /**
-     * Formati accettati:
+     * Accepted formats:
      * <ul>
-     *   <li>{@code #RRGGBB} o {@code #RGB}</li>
+     *   <li>{@code #RRGGBB} or {@code #RGB}</li>
      *   <li>{@code #RRGGBBAA} (alpha in hex)</li>
-     *   <li>{@code r,g,b} o {@code r,g,b,a} con interi 0–255</li>
+     *   <li>{@code r,g,b} or {@code r,g,b,a} with 0-255 integer values</li>
      * </ul>
      */
     public static Color parseColor(String s) {

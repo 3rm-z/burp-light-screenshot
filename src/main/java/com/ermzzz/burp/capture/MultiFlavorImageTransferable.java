@@ -11,8 +11,8 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Clipboard Transferable che espone sia {@link DataFlavor#imageFlavor} sia PNG (MIME image/png),
- * utile su Linux/X11 dove alcune app leggono solo uno dei due.
+ * Clipboard Transferable exposing both {@link DataFlavor#imageFlavor} and PNG (MIME image/png).
+ * Useful on Linux/X11 where some applications read only one of them.
  */
 public class MultiFlavorImageTransferable implements Transferable {
 

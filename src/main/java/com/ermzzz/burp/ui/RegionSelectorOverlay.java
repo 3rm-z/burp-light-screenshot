@@ -12,9 +12,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
- * Selezione regione sopra Burp usando il {@link JRootPane#setGlassPane(Component)}
- * del frame principale. Evita {@link JWindow} che su molti setup Linux/X11 resta
- * opaco/nero e copre tutta la finestra.
+ * Region selection overlay using {@link JRootPane#setGlassPane(Component)}
+ * on the main Burp frame. Avoids {@link JWindow}, which can remain opaque/black
+ * on some Linux/X11 setups and hide the whole window.
  */
 public final class RegionSelectorOverlay {
 
@@ -117,7 +117,7 @@ public final class RegionSelectorOverlay {
     }
 
     /**
-     * Ripristina il glass pane originale e invoca il callback. Deve girare sull’EDT.
+     * Restores the original glass pane and invokes callback. Must run on EDT.
      */
     private static void finish(JRootPane root, Component previousGlass, Consumer<Rectangle> callback,
                                Rectangle screenRect, AtomicBoolean finished) {

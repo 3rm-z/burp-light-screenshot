@@ -27,7 +27,7 @@ public class BurpExtender implements BurpExtension {
 
         api.logging().logToOutput("Light Screenshot Helper loaded");
         if (System.getProperty(SelectionAppearance.PROPERTY_SELECTION_COLOR) != null) {
-            api.logging().logToOutput("Light Screenshot: bordo selezione = "
+            api.logging().logToOutput("Light Screenshot: selection border = "
                     + SelectionAppearance.selectionBorderColor() + " (-D" + SelectionAppearance.PROPERTY_SELECTION_COLOR + ")");
         }
 
@@ -44,10 +44,10 @@ public class BurpExtender implements BurpExtension {
 
         JMenu colorModeMenu = new JMenu("Color mode");
         ButtonGroup colorModeGroup = new ButtonGroup();
-        JRadioButtonMenuItem reportLight = new JRadioButtonMenuItem("Report / chiaro", true);
+        JRadioButtonMenuItem reportLight = new JRadioButtonMenuItem("Report / light", true);
         reportLight.addActionListener(e -> {
             applyFilter = true;
-            api.logging().logToOutput("Light screenshot: color mode = report / chiaro");
+            api.logging().logToOutput("Light screenshot: color mode = report / light");
         });
         JRadioButtonMenuItem original = new JRadioButtonMenuItem("Original colors", false);
         original.addActionListener(e -> {
@@ -67,7 +67,7 @@ public class BurpExtender implements BurpExtension {
             JRadioButtonMenuItem item = new JRadioButtonMenuItem(p.label(), selected);
             item.addActionListener(e -> {
                 SelectionAppearance.setSelectionBorderColor(p.color());
-                api.logging().logToOutput("Light screenshot: bordo selezione impostato a " + p.label());
+                api.logging().logToOutput("Light screenshot: selection border set to " + p.label());
             });
             borderGroup.add(item);
             borderColorMenu.add(item);
@@ -75,7 +75,7 @@ public class BurpExtender implements BurpExtension {
         JMenuItem reset = new JMenuItem("Reset");
         reset.addActionListener(e -> {
             SelectionAppearance.resetToPropertyOrDefault();
-            api.logging().logToOutput("Light screenshot: bordo selezione ripristinato (property/default).");
+            api.logging().logToOutput("Light screenshot: selection border reset (property/default).");
             if (menuRegistration != null) {
                 menuRegistration.deregister();
             }
@@ -93,14 +93,14 @@ public class BurpExtender implements BurpExtension {
             Frame burpFrame = locateBurpFrame();
             if (burpFrame == null) {
                 JOptionPane.showMessageDialog(null,
-                        "Impossibile trovare la finestra principale di Burp.",
+                        "Unable to find the main Burp window.",
                         "Light Screenshot Helper",
                         JOptionPane.WARNING_MESSAGE);
                 return;
             }
             if (!(burpFrame instanceof JFrame)) {
                 JOptionPane.showMessageDialog(burpFrame,
-                        "La finestra di Burp non è un JFrame: la selezione regione (glass pane) non è disponibile.",
+                        "The Burp window is not a JFrame: region selection (glass pane) is unavailable.",
                         "Light Screenshot Helper",
                         JOptionPane.WARNING_MESSAGE);
                 return;
@@ -108,11 +108,11 @@ public class BurpExtender implements BurpExtension {
 
             RegionSelectorOverlay.selectRegion(burpFrame, rectangle -> {
                 if (rectangle == null || rectangle.width <= 0 || rectangle.height <= 0) {
-                    api.logging().logToOutput("Light screenshot: selezione annullata o vuota.");
+                    api.logging().logToOutput("Light screenshot: selection cancelled or empty.");
                     return;
                 }
-                api.logging().logToOutput("Light screenshot: regione selezionata " + rectangle);
-                // Robot + filtro + xclip/wl-copy NON vanno sull’EDT: bloccherebbero Burp e il repaint del glass pane.
+                api.logging().logToOutput("Light screenshot: selected region " + rectangle);
+                // Robot + filtering + xclip/wl-copy must not run on EDT; they can block Burp and repaint.
                 new Thread(() -> LightThemeCapture.captureRegionToClipboard(burpFrame, rectangle, api.logging(), applyFilter),
                         "burp-light-screenshot").start();
             });
@@ -130,7 +130,7 @@ public class BurpExtender implements BurpExtension {
             return visible.get();
         }
 
-        // fallback: frame attivo
+        // Fallback: active frame
         for (Frame f : frames) {
             if (f.isActive()) {
                 return f;

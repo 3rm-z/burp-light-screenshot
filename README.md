@@ -1,81 +1,69 @@
 # Burp Light Screenshot Helper
 
-Estensione Burp (Montoya): screenshot di una regione della finestra, stile “report chiaro” oppure colori originali, clipboard (+ PNG in `/tmp` su Linux).
+Burp (Montoya) extension for region screenshots with two output modes:
+
+- `Report / light`: converts dark UI captures to a light, document-friendly style.
+- `Original colors`: keeps source colors unchanged.
+
+Each capture is copied to clipboard and also saved as a temporary PNG.
 
 ## Build
 
 ```bash
-./gradlew jar
+gradle jar
 ```
 
-Carica il JAR generato in **Extensions**.
+Load the generated JAR in Burp `Extensions`.
 
-## Menu in Burp
+## Burp Menu
 
-Nel menu `Light Screenshot` trovi:
+The `Light Screenshot` menu includes:
 
-- `Take screenshot -> Clipboard` → avvia la selezione regione usando la modalità colore attiva
-- `Color mode` → scelta esclusiva tra `Report / chiaro` e `Original colors`
-- `Border color` → preset rapidi (neon) + `Reset`
+- `Take screenshot -> Clipboard`: starts region selection with the active color mode.
+- `Color mode`: exclusive choice between `Report / light` and `Original colors`.
+- `Border color`: quick border presets plus `Reset`.
 
-## Personalizzazione bordo selezione
+## Border Color Configuration
 
-Puoi cambiare il colore in due modi:
+You can set the selection border color in two ways:
 
-1. **Da menu Burp**: `Light Screenshot -> Border color`
-2. **Da JVM property** (default all'avvio), ad esempio:
+1. From Burp menu: `Light Screenshot -> Border color`
+2. Via JVM property (startup default), for example:
 
 ```text
 -Dburp.lightss.selection.color=#00E5FFCC
 ```
 
-Formati:
+Supported formats:
 
-| Formato | Esempio |
+| Format | Example |
 |--------|---------|
 | `#RRGGBB` | `#FF6600` |
-| `#RRGGBBAA` | `#FF6600D0` (alpha in hex) |
+| `#RRGGBBAA` | `#FF6600D0` (hex alpha) |
 | `r,g,b[,a]` | `0,200,255,200` |
 
-Proprietà: `burp.lightss.selection.color` (vedi `SelectionAppearance`).  
-Voce menu utile: `Reset to JVM property/default`.
+Property name: `burp.lightss.selection.color` (see `SelectionAppearance`).  
+Menu `Reset` restores JVM-property/default value.
 
-## Come “quantificare” se l’immagine è troppo ombrata / spenta
+## Linux Notes
 
-Obiettivo: dare un feedback **ripetibile** senza parole vaghe.
+On Linux, the extension tries native clipboard tools first:
 
-1. **Confronto visivo affiancato**  
-   Salva due PNG della stessa regione (es. raw dark da altro tool vs output dell’estensione) e mettile affiancate in un viewer. È il riferimento più diretto.
+- `xclip` (multiple invocation variants for better compatibility)
+- `wl-copy` when Wayland is available
+- AWT clipboard fallback if native tooling fails
 
-2. **Luminosità media (ImageMagick)**  
-   ```bash
-   identify -verbose screenshot.png | grep -i mean
-   ```  
-   Valori **mean** più bassi → immagine globalmente più scura (“ombra”).
+Logs include `DISPLAY`, `WAYLAND_DISPLAY`, and command outcomes to simplify troubleshooting.
 
-3. **Contrasto / deviazione**  
-   In GIMP: **Colori → Informazioni → Istogramma** sulla luminosità; se tutto è ammassato al centro → “piatta / ombrata”.
+## Windows Notes
 
-4. **Numeri che puoi incollarmi**  
-   - Media RGB approssimata (es. “mean ~180,180,185”)  
-   - O screenshot di istogramma  
-   - “Header azzurro e testo attributo hanno quasi stesso grigio” (cosa specifica + possibilmente crop zoom)
+If AWT image paste fails, the extension also attempts clipboard set via
+PowerShell (`powershell.exe -Sta`) using `System.Windows.Forms.Clipboard::SetImage`.
 
-5. **In codice** (se un giorno servisse)  
-   Si può aggiungere un log opzionale: luminanza media dell’immagine filtrata, o export side-by-side raw/filtrato.
+## Backlog
 
-## Linux (Kali, i3, X11)
+See `TODO.md`.
 
-L’estensione prova **`xclip`** in più modi (senza/s con `-i`, ordine argomenti, `cat | xclip` via `/bin/sh`) e, se tutto fallisce, **fallback AWT** (`sudo apt install xclip`).
+## Release
 
-- In **Output** compaiono `DISPLAY=…` e l’esito di `xclip`; se `DISPLAY` è “non impostato”, avvia Burp dallo stesso contesto dove hai X11 (es. da terminale dentro la sessione grafica).
-- Viene copiata anche la selection **`primary`** (incolla con **tasto centrale** in alcune app).
-- **VM → Windows**: molti hypervisor sincronizzano la clipboard **solo testo** verso l’host. Se su Kali `xclip` ha exit 0 ma su Windows non vedi l’immagine, è spesso un limite del guest: usa il **file PNG** in `/tmp` o una cartella condivisa.
-
-## Windows
-
-Se l’incolla immagine non funziona solo con AWT, l’estensione prova anche **PowerShell** (`powershell.exe -Sta`) con `System.Windows.Forms.Clipboard::SetImage` sul PNG in `%TEMP%`. Serve che PowerShell sia nel `PATH` (normale su Windows 10/11).
-
-## TODO
-
-Vedi `TODO.md` nel repo.
+See `RELEASE_CHECKLIST.md` before packaging/submission.

@@ -10,25 +10,25 @@ import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 
 /**
- * Cattura una regione dello schermo mentre lavori in dark theme, poi applica un filtro
- * “stile documento” chiaro sui pixel (senza toccare il Look&amp;Feel di Burp).
+ * Captures a screen region in dark theme and then applies a report-friendly
+ * light document filter on pixels (without changing Burp Look&amp;Feel).
  * <p>
- * Il cambio globale di L&amp;F + {@code updateComponentTreeUI} su tutta Burp può bloccare l'EDT;
- * questo approccio mantiene Burp stabile e produce comunque immagini più adatte ai report.
+ * Switching global L&amp;F + {@code updateComponentTreeUI} across Burp can block EDT;
+ * this approach keeps Burp responsive while producing report-ready images.
  */
 public final class LightThemeCapture {
 
-    /** Pausa dopo aver tolto il glass pane: altrimenti X11/compositor cattura ancora il bordo rosso. */
+    /** Delay after removing glass pane to avoid capturing the selection border. */
     private static final int POST_OVERLAY_DELAY_MS = 220;
-    /** Ritaglio interno (px per lato) per escludere stroke rosso + antialias dal mirino. */
+    /** Inset (px per side) to exclude border stroke + antialiasing from capture. */
     private static final int SELECTION_BORDER_INSET = 2;
 
     private LightThemeCapture() {
     }
 
     /**
-     * Esegui da un thread di lavoro (non EDT): {@link Robot}, filtro pixel e clipboard nativa
-     * possono bloccare a lungo; sull’EDT congelerebbero l’interfaccia.
+     * Run from a worker thread (not EDT): {@link Robot}, pixel filtering and native clipboard
+     * operations can block and would freeze UI if executed on EDT.
      */
     public static void captureRegionToClipboard(Frame burpFrame, Rectangle region, Logging logging) {
         captureRegionToClipboard(burpFrame, region, logging, true);
@@ -39,25 +39,25 @@ public final class LightThemeCapture {
             return;
         }
         try {
-            logging.logToOutput("Light screenshot: avvio capture (frame=" + burpFrame.getTitle() + ", region=" + region + ")");
+            logging.logToOutput("Light screenshot: starting capture (frame=" + burpFrame.getTitle() + ", region=" + region + ")");
             Robot robot = new Robot();
-            // Flush repaint dopo rimozione overlay (senza pausa il Robot vede ancora il bordo rosso).
-            logging.logToOutput("Light screenshot: attesa aggiornamento schermo (overlay)...");
+            // Flush repaint after overlay removal; otherwise Robot can still capture the border.
+            logging.logToOutput("Light screenshot: waiting for screen update (overlay)...");
             waitForScreenToUpdate(burpFrame, robot, logging);
             Rectangle captureRect = insetToSkipSelectionBorder(region);
-            logging.logToOutput("Light screenshot: area cattura effettiva (bordo selezione escluso): " + captureRect);
+            logging.logToOutput("Light screenshot: effective capture area (selection border excluded): " + captureRect);
             Image image = robot.createScreenCapture(captureRect);
             int w = image.getWidth(null);
             int h = image.getHeight(null);
-            logging.logToOutput("Light screenshot: cattura completata (" + w + "x" + h + ")");
+            logging.logToOutput("Light screenshot: capture completed (" + w + "x" + h + ")");
 
             BufferedImage raw = toBufferedImage(image);
             if (applyFilter) {
-                logging.logToOutput("Light screenshot: applico filtro stile documento (dark -> report chiaro)...");
+                logging.logToOutput("Light screenshot: applying document-style filter (dark -> report/light)...");
                 BufferedImage doc = DocumentLightFilter.toDocumentStyle(raw);
                 ClipboardCapture.copyImageToClipboard(doc, logging);
             } else {
-                logging.logToOutput("Light screenshot: modalità colori originali (nessun filtro).");
+                logging.logToOutput("Light screenshot: original colors mode (no filter).");
                 ClipboardCapture.copyImageToClipboard(raw, logging);
             }
         } catch (Throwable t) {
@@ -80,7 +80,7 @@ public final class LightThemeCapture {
             });
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            logging.logToOutput("Light screenshot: attesa EDT interrotta, proseguo comunque.");
+            logging.logToOutput("Light screenshot: EDT wait interrupted, continuing.");
         } catch (InvocationTargetException e) {
             logging.logToOutput("Light screenshot: repaint flush: " + e.getCause());
         }
@@ -88,7 +88,7 @@ public final class LightThemeCapture {
     }
 
     /**
-     * Ritaglia qualche pixel dentro il rettangolo scelto così non finisce nello shot il contorno rosso dell’overlay.
+     * Crops a few pixels inside the selected rectangle so the overlay border is not captured.
      */
     private static Rectangle insetToSkipSelectionBorder(Rectangle region) {
         int inset = SELECTION_BORDER_INSET;

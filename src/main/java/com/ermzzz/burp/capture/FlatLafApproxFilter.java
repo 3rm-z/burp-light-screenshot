@@ -4,25 +4,25 @@ import java.awt.Color;
 import java.awt.image.BufferedImage;
 
 /**
- * Avvicina i colori a un light theme tipo FlatLaf / Burp (senza cambiare il L&amp;F in runtime).
+ * Brings colors closer to a FlatLaf/Burp light theme without changing runtime Look&amp;Feel.
  */
 public final class FlatLafApproxFilter {
 
-    /** Arancio pulsante / GET più acceso (#FF780A). */
+    /** Brighter button/GET orange (#FF780A). */
     private static final int ORANGE_R = 255;
     private static final int ORANGE_G = 102;
     private static final int ORANGE_B = 0;
 
-    /** Burp AI — indigo più chiaro (#5C6BC0). */
+    /** Burp AI lighter indigo (#5C6BC0). */
     private static final int AI_R = 150;
     private static final int AI_G = 160;
     private static final int AI_B = 240;
 
-    /** Verde status più vivo (#43A047). */
+    /** Vivid status green (#43A047). */
     private static final int GREEN_R = 67;
     private static final int GREEN_G = 160;
     private static final int GREEN_B = 71;
-    /** Blu header più vicino al light originale. */
+    /** Header blue closer to the original light theme. */
     private static final int HEADER_BLUE_R = 74;
     private static final int HEADER_BLUE_G = 116;
     private static final int HEADER_BLUE_B = 184;
@@ -78,19 +78,19 @@ public final class FlatLafApproxFilter {
                     tg = 36;
                     tb = 170;
                 } else if (H >= 0.52f && H <= 0.72f && S >= 0.03f && S <= 0.55f && Br > 0.50f) {
-                    // Header "bluino": dopo DocumentLightFilter la saturazione sale a ~0.45, S <= 0.55 lo cattura
+                    // Header blue: after DocumentLightFilter saturation rises to ~0.45, so S <= 0.55 captures it.
                     a = smoothstep(0.03f, 0.30f, S) * 0.85f;
                     tr = HEADER_BLUE_R;
                     tg = HEADER_BLUE_G;
                     tb = HEADER_BLUE_B;
                 } else if (H >= 0.50f && H <= 0.70f && S > 0.55f && Br > 0.18f) {
-                    // Blu stringhe/valori (S alta, > 0.55)
+                    // Value/string blue tones (high S, > 0.55)
                     a = smoothstep(0.55f, 0.80f, S) * 0.18f;
                     tr = 25;
                     tg = 118;
                     tb = 210;
                 } else if (H >= 0.28f && H < 0.52f && S > 0.04f) {
-                    // Header teal anche se poco saturi (dopo filtro finiscono grigi)
+                    // Header teal even when mildly saturated (otherwise tends to gray out after filtering).
                     a = smoothstep(0.04f, 0.28f, S) * 0.45f;
                     tr = 0;
                     tg = 107;
@@ -101,7 +101,7 @@ public final class FlatLafApproxFilter {
                     tg = GREEN_G;
                     tb = GREEN_B;
                 } else if (H >= 0.04f && H <= 0.12f && S > 0.04f) {
-                    // Cookie / valori arancioni
+                    // Cookie / orange values
                     a = smoothstep(0.04f, 0.2f, S) * 0.60f;
                     tr = ORANGE_R; 
                     tg = ORANGE_G; 
