@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## [1.0.1] - 2026-04-15
+
+### Fixed
+- Reduced pixelated/grainy appearance in `Report / light` mode by switching sharpening to edge-aware behavior.
+- Lowered sharpening intensity and skipped flat regions to preserve text clarity without adding noise.
+
 ## [1.0.0] - 2026-04-15
 
 ### Added
