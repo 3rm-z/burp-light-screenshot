@@ -7,7 +7,9 @@ import java.awt.image.BufferedImage;
  */
 public final class LightOutputSharpen {
 
-    private static final float STRENGTH = 0.42f;
+    private static final float MAX_STRENGTH = 0.22f;
+    private static final int EDGE_THRESHOLD = 10;
+    private static final int EDGE_MAX = 70;
 
     private LightOutputSharpen() {
     }
@@ -52,10 +54,17 @@ public final class LightOutputSharpen {
                 int rAvg = (ru + rd + rl + rr) / 4;
                 int gAvg = (gu + gd + gl + gr) / 4;
                 int bAvg = (bu + bd + bl + br) / 4;
+                int lumAvg = (2126 * rAvg + 7152 * gAvg + 722 * bAvg) / 10000;
+                int edge = Math.abs(lum - lumAvg);
+                if (edge < EDGE_THRESHOLD) {
+                    continue;
+                }
 
-                int nr = clamp255(Math.round(r + STRENGTH * (r - rAvg)));
-                int ng = clamp255(Math.round(g + STRENGTH * (g - gAvg)));
-                int nb = clamp255(Math.round(b + STRENGTH * (b - bAvg)));
+                float edgeFactor = clamp01((edge - EDGE_THRESHOLD) / (float) (EDGE_MAX - EDGE_THRESHOLD));
+                float amount = MAX_STRENGTH * edgeFactor;
+                int nr = clamp255(Math.round(r + amount * (r - rAvg)));
+                int ng = clamp255(Math.round(g + amount * (g - gAvg)));
+                int nb = clamp255(Math.round(b + amount * (b - bAvg)));
                 out[i] = (nr << 16) | (ng << 8) | nb;
             }
         }
@@ -64,5 +73,9 @@ public final class LightOutputSharpen {
 
     private static int clamp255(int v) {
         return Math.max(0, Math.min(255, v));
+    }
+
+    private static float clamp01(float v) {
+        return Math.max(0f, Math.min(1f, v));
     }
 }
