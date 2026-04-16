@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## [1.0.2] - 2026-04-16
+
+### Changed
+- Reissued release metadata and tag naming to keep versioning aligned on `v1.x.x`.
+- No functional code changes compared to `1.0.1`; same sharpening quality fix is included.
+
 ## [1.0.1] - 2026-04-15
 
 ### Fixed
